@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "RW_lock/rwlock.h"
+
 int SERVER_PORT;
 long CACHE_LEN;
 int NUM_WORKER_THREADS;
@@ -14,8 +16,10 @@ void error (char* msg) {
 }
 
 int main(int argc, char** argv) {
+    struct rwlock *rwl = init_rwlock(rwl);
+    read_lock(rwl);
     read_config();
-    
+    read_unlock(rwl);
     return 0;
 }
 
