@@ -1,0 +1,9 @@
+How to run server:
+    1) gcc server.c -lpthread -o server
+    2) ./server
+
+How to run client:
+    1) gcc client.c -o client
+    2) ./client
+
+Note: Server port will be read from config.txt
