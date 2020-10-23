@@ -6,4 +6,8 @@ How to run client:
     1) gcc client.c -o client
     2) ./client
 
+How to run test_client:
+    1) gcc test_client.c -o test
+    2) ./test
+
 Note: Server port will be read from config.txt

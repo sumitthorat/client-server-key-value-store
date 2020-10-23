@@ -170,7 +170,7 @@ void* worker(void* arg) {
     struct epoll_event events[8];
     
     while (1) {
-        printf("New round\n");
+        // printf("New round\n");
         int nfds = epoll_wait(worker_epoll_fds[id], events, 8, 10000);
 
         char buff[11];
@@ -189,6 +189,7 @@ void* worker(void* arg) {
 
             
             printf("WT = %d, MSG = %s\n", id, buff);
+            handle_requests(buff);
             // Here request will be parsed and appropriate action will be taken
         }
     }
@@ -260,16 +261,22 @@ char *get(char *msg) {
     ENTRY *entry = find_in_cache(key);
     
     // key is present in the cache
-    if (entry)
+    if (entry) {
+        printf("Got value =\"%s\"\n", entry->val);
         return entry->val;
+    }
     else {
         char *val = find_in_PS(key);
 
         // key is not present in the PS
-        if(!val) 
+        if(!val) {
+            printf("Error: key not present\n");
             return "Error: key not present";
-        else
+        }
+        else {
+            printf("Got value =\"%s\"\n", val);
             return val; //TODO: add ENTRY to the cache
+        }
     }
 
     free(key);

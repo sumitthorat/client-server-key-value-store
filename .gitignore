@@ -5,3 +5,4 @@ server
 *.o
 demo*
 *copy*
+PS.txt
