@@ -84,21 +84,21 @@ int main(int argc, char** argv) {
 
 
     // Conitnuously accept new connectionsd
-    int client_no = 0;
+    int wt = 0;
     struct epoll_event ev;
     while (1) {
         // Accept incoming connection
         int clilen = sizeof(cli_addr);
         ev.data.fd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-        printf("Accepted new connection: %d, assigned to WT = %d\n", cli_addr.sin_port, client_no % NUM_WORKER_THREADS);
+        printf("Accepted new connection: %d, assigned to WT = %d\n", cli_addr.sin_port, wt);
         
         // Set event listener and assign to appropriate worker thread 
         ev.events = EPOLLIN;
-        if (epoll_ctl(worker_epoll_fds[client_no % NUM_WORKER_THREADS], EPOLL_CTL_ADD, ev.data.fd, &ev) < 0) {
+        if (epoll_ctl(worker_epoll_fds[wt], EPOLL_CTL_ADD, ev.data.fd, &ev) < 0) {
             error("Error in epoll adding");
         }
 
-        client_no++;
+        wt = ++wt % NUM_WORKER_THREADS;
     }
 
 
