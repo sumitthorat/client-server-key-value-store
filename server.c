@@ -5,6 +5,15 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <time.h>
+#include <sys/epoll.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <signal.h>
+
+#include "RW_lock/rwlock.h"
 
 // #define MSG_SIZE 513
 // #define KEY_SIZE 256
@@ -14,6 +23,7 @@
 #define MSG_SIZE 9
 #define KEY_SIZE 4
 #define VAL_SIZE 4
+
 struct cache_ENTRY {
     char *key;
     char *val;
@@ -28,6 +38,8 @@ ENTRY *cache_ptr = NULL;
 int SERVER_PORT;
 long CACHE_LEN;
 int NUM_WORKER_THREADS;
+int* worker_epoll_fds;
+int sockfd;
 
 void read_config();
 void initialize_cache();
@@ -49,6 +61,8 @@ char *find_in_PS(char *key);
 char *update_PS(char *key, char *val);
 char *remove_from_PS(char *key);
 
+void* worker(void*);
+
 // Utility function to find substring of str
 char *substring(char *str, int start, int end) {
     int bytes = (end - start + 1);
@@ -66,65 +80,118 @@ void error (char* msg) {
     exit(1);
 }
 
+void signal_handler(int sig) {
+    close(sockfd);
+    exit(0);
+}
+
 int main(int argc, char** argv) {
+    // Register signal handler
+    signal(SIGINT, signal_handler); // for ctrl-c
+
+    // Read config file
     read_config();
     initialize_cache();
+    
+    struct sockaddr_in serv_addr, cli_addr;
 
-    // Test - 1
-    // put("1111haha");
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) {
+        error("Error in server listening socket");
+    }
 
-    // printf("\n\n");
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(SERVER_PORT);
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
 
-    // put("2222RKRK");
+    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+        error("Error in binding");
+    }
 
-    // printf("\n\n");
+    listen(sockfd, 5);
 
-    // printf("\n\n");
+    /*
+        Setup the data structures for each worker thread i.e. epoll instance specific to each thread
+        epoll_create for n threads, add to array
+    */
+    worker_epoll_fds = (int*) malloc(sizeof(int) * NUM_WORKER_THREADS);
+    int t_ids[NUM_WORKER_THREADS];
+    pthread_t ids[NUM_WORKER_THREADS];
+    for (int i = 0; i < NUM_WORKER_THREADS; ++i) {
+        // Create epoll instance for each thread 
+        worker_epoll_fds[i] = epoll_create1(0);
+        if (worker_epoll_fds[i] == -1) {
+            error("Failed to create epoll instance");
+        }
 
-    // put("3333rrrr");
+        // Create and spawn worker thread
+		t_ids[i] = i;
+		pthread_create(&ids[i], NULL, worker, (void*) &t_ids[i]);
+	
+    }
 
-    // printf("%s\n", get("1111aaaa"));
 
-    // printf("\n\n");
+    // Conitnuously accept new connectionsd
+    int wt = 0;
+    struct epoll_event ev;
+    while (1) {
+        // Accept incoming connection
+        int clilen = sizeof(cli_addr);
+        ev.data.fd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+        printf("Accepted new connection: %d, assigned to WT = %d\n", cli_addr.sin_port, wt);
+        
+        // Set event listener and assign to appropriate worker thread 
+        ev.events = EPOLLIN;
+        if (epoll_ctl(worker_epoll_fds[wt], EPOLL_CTL_ADD, ev.data.fd, &ev) < 0) {
+            error("Error in epoll adding");
+        }
 
-    // printf("%s\n", get("2222aaaa"));
+        wt = ++wt % NUM_WORKER_THREADS;
+    }
 
-    // printf("\n\n");
 
-    // printf("%s\n", get("3333aaaa"));
 
-    // del("3333aaaa");
-    // printf("\n\n");
-
-    // printf("%s\n", get("3333aaaa"));
-
-    put("1111aaaa");
-    put("1111bbbb");
-    put("1111cccc");
-    put("1111dddd");
-    put("2222bbbb");
-    put("3333dddd");
-    printf("\n\n");
-
-    printf("%s\n", get("1111aaaa"));
-
-    printf("\n\n");
-
-    printf("%s\n", get("2222aaaa"));
-
-    printf("\n\n");
-
-    printf("%s\n", get("3333aaaa"));
-
-    // while(1) {
-    //     char str[1 + KEY_SIZE + VAL_SIZE];
-    //     printf("Enter\n");
-    //     scanf("%s",str);
-    //     char *res = handle_requests(str);
-    //     if (res)
-    //         printf("RES: %s\n", res);
-    // }
+    for (int i = 0; i < NUM_WORKER_THREADS; ++i) {
+        pthread_join(ids[i], NULL);
+        close(worker_epoll_fds[i]);
+    }
+    
     return 0;
+}
+
+void* worker(void* arg) {
+    int id = *((int*)arg);
+
+    printf("Thread %d is ready\n", id);
+
+
+    // // Probe the file descriptors
+    struct epoll_event events[8];
+    
+    while (1) {
+        printf("New round\n");
+        int nfds = epoll_wait(worker_epoll_fds[id], events, 8, 10000);
+
+        char buff[11];
+        int buff_len = 11;
+        for (int i = 0; i < nfds; ++i) {
+            memset(buff, 0, buff_len);
+            ssize_t len = read(events[i].data.fd, buff, buff_len);
+            if (len == 0) {
+                close(events[i].data.fd);
+                continue;
+            }
+
+            if (len < 0) {
+                error("Read Error");
+            }
+
+            
+            printf("WT = %d, MSG = %s\n", id, buff);
+            // Here request will be parsed and appropriate action will be taken
+        }
+    }
 }
 
 void read_config() {

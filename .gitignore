@@ -1,1 +1,7 @@
 config.txt
+a.out
+client
+server
+*.o
+demo*
+*copy*
