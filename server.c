@@ -1,19 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/epoll.h>
 #include <unistd.h>
+#include <sys/epoll.h>
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <signal.h>
 
-
 #include "RW_lock/rwlock.h"
+#include "handle_reqs.h"
 
 int SERVER_PORT;
-long CACHE_LEN;
 int NUM_WORKER_THREADS;
 int* worker_epoll_fds;
 int sockfd;
@@ -21,19 +20,10 @@ int sockfd;
 void read_config();
 void* worker(void*);
 
-void error (char* msg) {
-    perror(msg);
-    exit(1);
-}
-
-
-
 void signal_handler(int sig) {
     close(sockfd);
     exit(0);
 }
-
-
 
 int main(int argc, char** argv) {
     // Register signal handler
@@ -41,8 +31,7 @@ int main(int argc, char** argv) {
 
     // Read config file
     read_config();
-
-    // Setup server's listening socket
+    initialize_cache();
     
     struct sockaddr_in serv_addr, cli_addr;
 
@@ -121,7 +110,7 @@ void* worker(void* arg) {
     struct epoll_event events[8];
     
     while (1) {
-        printf("New round\n");
+        // printf("New round\n");
         int nfds = epoll_wait(worker_epoll_fds[id], events, 8, 10000);
 
         char buff[11];
@@ -140,6 +129,7 @@ void* worker(void* arg) {
 
             
             printf("WT = %d, MSG = %s\n", id, buff);
+            handle_requests(buff);
             // Here request will be parsed and appropriate action will be taken
         }
     }
@@ -176,4 +166,3 @@ void read_config() {
 
     fclose(fptr);
 }
-

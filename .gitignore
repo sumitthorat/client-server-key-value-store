@@ -1,0 +1,9 @@
+config.txt
+a.out
+client
+server
+*.o
+demo*
+*copy*
+PS.txt
+test
