@@ -30,7 +30,7 @@ static void write_unlock(struct rwlock *);
 /*
 * This function will initialise all the variables mentioned in the struct rwlock.
 */
-static struct rwlock *init_rwlock(struct rwlock *rwl){
+static struct rwlock *init_rwlock (struct rwlock *rwl) {
     rwl = (struct rwlock *)malloc(sizeof(struct rwlock));
     rwl->reader_count = 0;
     rwl->writer=0;
@@ -45,7 +45,7 @@ static struct rwlock *init_rwlock(struct rwlock *rwl){
 * Incase there is a writer, the reader will wait for the writer to finish.
 * Else it enters the section which it will read and increments the reader_count
 */
-static void read_lock(struct rwlock *rwl){
+static void read_lock (struct rwlock *rwl) {
     pthread_mutex_lock(&rwl->mutex);
     while (rwl->writer)
     {
@@ -60,7 +60,7 @@ static void read_lock(struct rwlock *rwl){
 * It will decrement the reader_count by 1.
 * Incase reader_count==0, then it will signal all the writers that might be waiting.
 */
-static void read_unlock(struct rwlock *rwl){
+static void read_unlock (struct rwlock *rwl) {
     pthread_mutex_lock(&rwl->mutex);
     rwl->reader_count--;
     if(rwl->reader_count==0){
@@ -74,7 +74,7 @@ static void read_unlock(struct rwlock *rwl){
 * Incase there is a reader, the writer will wait for the reader to finish.
 * It will set the writer flag to 1.
 */
-static void write_lock(struct rwlock *rwl){
+static void write_lock (struct rwlock *rwl) {
     pthread_mutex_lock(&rwl->mutex);
     while (rwl->reader_count>0 || rwl->writer)
     {
@@ -89,7 +89,7 @@ static void write_lock(struct rwlock *rwl){
 * It then broadcasts all the readers waiting on this resource
 * It will set the writer flag to 0.
 */
-static void write_unlock(struct rwlock *rwl){
+static void write_unlock (struct rwlock *rwl) {
     pthread_mutex_lock(&rwl->mutex);
     rwl->writer=0;
     pthread_cond_broadcast(&rwl->read_wait);
