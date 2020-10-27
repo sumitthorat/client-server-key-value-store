@@ -117,12 +117,12 @@ void send_put_message(){
 
 void populate_kv_store(int sockfd){
     unsigned char message[514];
-    message[0] = '1';
+    message[0] = '2';
     int n, i=0;
     while (i<NUM_OF_INTIAL_ENTRIES)
     {
         for (int i=1; i<513; i++)
-        message[i] = 'A' + random() % 26;
+            message[i] = 'A' + random() % 26;
         message[513] = (char)0;
         key_values[i] =  strdup(message);
         n = write(sockfd, message, strlen(message));

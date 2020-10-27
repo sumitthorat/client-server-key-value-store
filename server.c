@@ -10,7 +10,8 @@
 #include <signal.h>
 
 #include "RW_lock/rwlock.h"
-#include "handle_reqs.h"
+#include "Requests/req_handler.h"
+// #include "handle_reqs.h"
 
 int SERVER_PORT;
 int NUM_WORKER_THREADS;

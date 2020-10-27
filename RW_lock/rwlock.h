@@ -1,6 +1,6 @@
-#include<stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include<pthread.h>
+#include <pthread.h>
 
 /*
 * A typical structure for a read write lock instance.
@@ -21,7 +21,7 @@ struct rwlock
 /*
 * Below are the prototype functions that are required for implementing a reader-writer lock.
 */
-static struct rwlock *init_rwlock(struct rwlock *);
+static void *init_rwlock(struct rwlock *);
 static void read_lock(struct rwlock *);
 static void read_unlock(struct rwlock *);
 static void write_lock(struct rwlock *);
@@ -30,8 +30,7 @@ static void write_unlock(struct rwlock *);
 /*
 * This function will initialise all the variables mentioned in the struct rwlock.
 */
-static struct rwlock *init_rwlock (struct rwlock *rwl) {
-    rwl = (struct rwlock *)malloc(sizeof(struct rwlock));
+static void *init_rwlock (struct rwlock *rwl) {
     rwl->reader_count = 0;
     rwl->writer=0;
     pthread_mutex_init(&rwl->mutex, NULL);
