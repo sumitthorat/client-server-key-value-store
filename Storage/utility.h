@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 
 #define MSG_SIZE 9
 #define KEY_SIZE 4
@@ -32,4 +33,11 @@ char *substring(char *str, int start, int end) {
 void error (char* msg) {
     perror(msg);
     exit(1);
+}
+
+unsigned long get_microsecond_timestamp(){
+    struct timeval tv;
+    gettimeofday(&tv,NULL);
+    unsigned long time_in_micros = 1000000 * tv.tv_sec + tv.tv_usec;
+    return time_in_micros;
 }

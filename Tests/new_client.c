@@ -21,17 +21,15 @@ int NUM_OF_DEL;
 int NUM_OF_CLIENTS;
 int NUM_OF_INTIAL_ENTRIES;
 
+pthread_mutex_t lock; 
+
 char *key_values[1000];
 
-char *substring(char *str, int start, int end) {
-    int bytes = (end - start + 1);
-    char *substr = (char *)malloc(bytes);
-
-    for (int i = start; i < end; i++) {
-        substr[i - start] = str[i];
-    }
-
-    return substr;
+unsigned long get_microsecond_timestamp(){
+    struct timeval tv;
+    gettimeofday(&tv,NULL);
+    unsigned long time_in_micros = 1000000 * tv.tv_sec + tv.tv_usec;
+    return time_in_micros;
 }
 
 void read_config(){
@@ -127,16 +125,18 @@ void close_connection(int sockfd){
 }
 
 void send_get_message(int t_id, int sockfd){
-    struct timeval tv;
-    gettimeofday(&tv,NULL);
-    unsigned long time_in_micros = 1000000 * tv.tv_sec + tv.tv_usec;
-    srand((int)time_in_micros);
+    // struct timeval tv;
+    // gettimeofday(&tv,NULL);
+    // unsigned long time_in_micros = 1000000 * tv.tv_sec + tv.tv_usec;
+    srand((int)get_microsecond_timestamp());
+    pthread_mutex_lock(&lock);
     int index = random()%NUM_OF_INTIAL_ENTRIES;
+    pthread_mutex_unlock(&lock);
     char *message = key_values[index];
     // char *key = substring(message, 0, (MSG_SIZE-1)/2 +1);
     message[0]='1';
     // key[(MSG_SIZE-1)/2 +1]='\0';
-    printf("Sending a GET from thread_id: %d, for key: %s\n", t_id, message);
+    printf("Sending a GET from thread_id: %d, for key-value: %s\n", t_id, message);
     int n = write(sockfd, message, strlen(message));
     if (n < 0) {
         herror("Error writing to socket");
@@ -144,16 +144,35 @@ void send_get_message(int t_id, int sockfd){
 }
 
 void send_del_message(int t_id, int sockfd){
-    printf("Del called by thread id: %d\n", t_id);
+    // printf("Del called by thread id: %d\n", t_id);
+    // struct timeval tv;
+    // gettimeofday(&tv,NULL);
+    // unsigned long time_in_micros = 1000000 * tv.tv_sec + tv.tv_usec;
+    srand((int)get_microsecond_timestamp());
+    pthread_mutex_lock(&lock);
+    int index = random()%NUM_OF_INTIAL_ENTRIES;
+    NUM_OF_INTIAL_ENTRIES--;
+    pthread_mutex_unlock(&lock);
+    char *message = key_values[index];
+    // char *key = substring(message, 0, (MSG_SIZE-1)/2 +1);
+    message[0]='3';
+    // key[(MSG_SIZE-1)/2 +1]='\0';
+    printf("Sending a DEL from thread_id: %d, for key-value: %s\n", t_id, message);
+    int n = write(sockfd, message, strlen(message));
+    if (n < 0) {
+        herror("Error writing to socket");
+    }
 }
 
 void send_put_message(int t_id, int sockfd){
     // printf("Put called by thread id: %d\n", t_id);
-    struct timeval tv;
-    gettimeofday(&tv,NULL);
-    unsigned long time_in_micros = 1000000 * tv.tv_sec + tv.tv_usec;
-    srand((int)time_in_micros);
+    // struct timeval tv;
+    // gettimeofday(&tv,NULL);
+    // unsigned long time_in_micros = 1000000 * tv.tv_sec + tv.tv_usec;
+    srand((int)get_microsecond_timestamp());
+    pthread_mutex_lock(&lock);
     int index = random()%NUM_OF_INTIAL_ENTRIES;
+    pthread_mutex_unlock(&lock);
     char *message = key_values[index];
     // char *key = substring(message, 0, (MSG_SIZE-1)/2 +1);
     // key[0]='1';
@@ -204,27 +223,30 @@ void *thread_fun(void *args){
     int get=NUM_OF_GET;
     int put=NUM_OF_PUT;
     int del=NUM_OF_DEL;
-    int i =0;
     printf("Thread-%d initialised...\n", t_id);
     //Creating a seed (Right now not calling delete)
-    while (get||put)
+    while (get||put||del)
     {
         /* code */
-        srand(time(NULL));
+        srand((int)get_microsecond_timestamp());
         int random_num;
-        if (get && put)
+        if (get && put && del)
+        {
+            /* code */
+            random_num = rand()%3 + 1;
+        }
+        else if ((get && put)||(get && del)||(put && put))
         {
             /* code */
             random_num = rand()%2 + 1;
         }
-        else if (get)
+        else if(get)
         {
-            /* code */
             random_num=1;
-        }
-        else if(put)
-        {
+        }else if(put){
             random_num=2;
+        }else if(del){
+            random_num=3;
         }
         switch(random_num) {
         case 1:
@@ -252,6 +274,7 @@ void *thread_fun(void *args){
             return "Error: invalid option";
         }
     }
+    close_connection(sockfd);
 }
 
 
@@ -263,6 +286,10 @@ int main(){
     populate_kv_store(socket);
     close_connection(socket);
     //Create clients here
+    if (pthread_mutex_init(&lock, NULL) != 0) { 
+        printf("\n mutex init has failed\n"); 
+        return 1; 
+    } 
     pthread_t thread_id[NUM_OF_CLIENTS];
 
     printf("Phase 3...\n");

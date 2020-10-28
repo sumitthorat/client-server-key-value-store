@@ -19,7 +19,7 @@ struct cache_ENTRY {
     char is_valid;
     char is_dirty;
     int freq;
-    int timestamp;
+    unsigned long timestamp;
     struct rwlock rwl;
 };
 
@@ -36,6 +36,7 @@ ENTRY *LRU();
 ENTRY *find_in_cache(char *key);
 void remove_from_cache(ENTRY *loc);
 void update_cache(ENTRY *loc, char *key, char *val);
+void update_frequency_timestamp(ENTRY *loc);
 
 void initialize_cache() {
     cache_ptr = (ENTRY *)malloc(CACHE_LEN * sizeof(ENTRY));
@@ -58,8 +59,8 @@ ENTRY *find_in_cache(char *key) {
             // printf("(cache) Found: %s\n", loc->key);
             if (strcmp(loc->key, key) == 0){
                 // TODO: Move this out 
-                loc->timestamp = (int)time(NULL);
-                loc->freq ++;
+                // loc->timestamp = (int)time(NULL);
+                // loc->freq ++;
                 read_unlock(&(loc->rwl));
                 // printf("Released read lock for %p\n",loc);
                 return loc;
@@ -90,7 +91,7 @@ void update_cache(ENTRY *loc, char *key, char *val) {
     loc->val = val;
     loc->is_valid = 'T';
     loc->is_dirty = 'T';
-    loc->timestamp = (int)time(NULL);
+    loc->timestamp = get_microsecond_timestamp();
     write_unlock(&(loc->rwl));
     // printf("Released write lock for %p\n",loc);
     printf("Updated entry: %s-%s(%d) \n", loc->key,loc->val, loc->freq);
@@ -146,14 +147,15 @@ ENTRY *LRU() {
         return loc;
     }
     
-    int oldest_time = (int)time(NULL) + 1;
+    // int oldest_time = (int)time(NULL) + 1;
+    unsigned long oldest_time = get_microsecond_timestamp();
     ENTRY *line = NULL;
     for (int i = 0; i < CACHE_LEN; i++) {
         loc = cache_ptr + i;
         // printf("Trying for read lock at %p\n",loc);
         read_lock(&(loc->rwl));
         // printf("Released read lock for %p\n",loc);
-        printf("LRU: %s %d\n", loc->key, loc->timestamp);
+        printf("LRU: %s %ld\n", loc->key, loc->timestamp);
         if (loc->timestamp < oldest_time) {
             oldest_time = loc->timestamp;
             line = loc;
@@ -195,4 +197,9 @@ ENTRY *find_available_cache_line() {
     return NULL;
 }
 
-
+void update_frequency_timestamp(ENTRY *loc){
+    write_lock(&(loc->rwl));
+    loc->freq++;
+    loc->timestamp = get_microsecond_timestamp();
+    write_unlock(&(loc->rwl));
+}

@@ -1,4 +1,4 @@
-#include "Storage/cache.h"
+#include "../Storage/cache.h"
 
 
 #define MSG_SIZE 9
@@ -43,7 +43,7 @@ char *get(char *msg) {
     if (entry) {
         printf("Got value =\"%s\"\n", entry->val);
         // Updating the timestamp & frequency after a get for the key.
-        
+        update_frequency_timestamp(entry);
         return entry->val;
     }
     else {
