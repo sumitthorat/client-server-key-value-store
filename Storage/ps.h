@@ -6,7 +6,7 @@ void remove_from_PS(char *key);
 
 char *find_in_PS(char *key) {
     printf("find_in_PS\n");
-    int fd = open("PS.txt", O_RDONLY, 0666);
+    int fd = open("PS.txt", O_RDONLY | O_CREAT, 0666);
     if (fd < 0)
         error("Could not open PS.txt");
         
@@ -25,6 +25,7 @@ char *find_in_PS(char *key) {
 
         if (strcmp(thiskey, key) == 0) {
             free(thiskey);
+            close(fd);
             if (buf[0] == 'D') // Delete entry present in log
                 return NULL;
             else // Insert entry present in log

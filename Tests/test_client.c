@@ -50,16 +50,18 @@ void connect_send() {
     if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
         error("ERROR connecting");
     }
-    
+    printf("Connected\n");
     char* buff; 
     while (1) {
         char key[KEY_SIZE], val[VAL_SIZE];
         char buff[MSG_SIZE + 1];
         int status;
         printf("Enter op status, Key & val\n");
-        scanf("%d %s %s", &status, key, val);
+        // scanf("%d %s %s", &status, key, val);
+        scanf("%s", buff);
         
-        sprintf(buff, "%c%s%s", '0' + status, key, val);
+        // sprintf(buff, "%c%s%s", '0' + status, key, val);
+        printf("Buff is: %s\n",buff);
         buff[MSG_SIZE] = '\0';
 
         n = write(sockfd, buff, MSG_SIZE);

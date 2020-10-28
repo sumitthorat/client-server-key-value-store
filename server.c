@@ -9,7 +9,7 @@
 #include <netinet/in.h>
 #include <signal.h>
 
-#include "RW_lock/rwlock.h"
+// #include "RW_lock/rwlock.h"
 #include "Requests/req_handler.h"
 // #include "handle_reqs.h"
 
@@ -114,8 +114,8 @@ void* worker(void* arg) {
         // printf("New round\n");
         int nfds = epoll_wait(worker_epoll_fds[id], events, 8, 10000);
 
-        char buff[11];
-        int buff_len = 11;
+        char buff[9];
+        int buff_len = 9; 
         for (int i = 0; i < nfds; ++i) {
             memset(buff, 0, buff_len);
             ssize_t len = read(events[i].data.fd, buff, buff_len);
@@ -128,8 +128,9 @@ void* worker(void* arg) {
                 error("Read Error");
             }
 
-            
+            printf("\n");
             printf("WT = %d, MSG = %s\n", id, buff);
+            
             handle_requests(buff);
             // Here request will be parsed and appropriate action will be taken
         }
