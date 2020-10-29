@@ -16,7 +16,7 @@ struct entry_with_status {
 };
 
 void initialize_cache();
-struct entry_with_status find_in_cache(char *key);
+struct entry_with_status *find_in_cache(char *key);
 void remove_from_cache(ENTRY *loc);
 void update_cache_line(ENTRY *loc, char *key, char *val);
 void update_frequency_timestamp(ENTRY *loc);
@@ -36,7 +36,7 @@ void initialize_cache() {
     Status = 2 -> an available Cache line is returned
     Status = 3 -> Cache line with LRU Key is returned
 */
-struct entry_with_status find_in_cache(char *key) {
+struct entry_with_status *find_in_cache(char *key) {
     printf("find_in_cache\n");
 
     int status = 3; //by default status = 3
@@ -69,9 +69,9 @@ struct entry_with_status find_in_cache(char *key) {
         read_unlock(&(loc->rwl));
         // printf("Released read lock for %p\n",loc);
     }
-    struct entry_with_status ret;
-    ret.entry = entry;
-    ret.status = status;
+    struct entry_with_status *ret = (struct entry_with_status *)malloc(sizeof(struct entry_with_status));
+    ret->entry = entry;
+    ret->status = status;
     return ret;
 }
 

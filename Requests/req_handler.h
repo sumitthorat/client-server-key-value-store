@@ -37,9 +37,10 @@ char *handle_requests(char *msg) {
 char *get(char *msg) {
     printf("get\n");
     char *key = substring(msg, 0, KEY_SIZE);
-    struct entry_with_status entry_with_status_val = find_in_cache(key);
-    ENTRY *loc = entry_with_status_val.entry;
-    int status = entry_with_status_val.status;
+    struct entry_with_status *entry_with_status_val = find_in_cache(key);
+    ENTRY *loc = entry_with_status_val->entry;
+    int status = entry_with_status_val->status;
+    free(entry_with_status_val);
 
     // key is present in the cache
     if (status == 1) {
@@ -80,13 +81,14 @@ void put(char *msg) {
     char *key = substring(msg, 0, KEY_SIZE);
     char *val = substring(msg, KEY_SIZE, KEY_SIZE + VAL_SIZE);
 
-    struct entry_with_status entry_with_status_val = find_in_cache(key);
-    ENTRY *loc = entry_with_status_val.entry;
-    int status = entry_with_status_val.status;
+    struct entry_with_status *entry_with_status_val = find_in_cache(key);
+    ENTRY *loc = entry_with_status_val->entry;
+    int status = entry_with_status_val->status;
+    free(entry_with_status_val);
 
     int flag = 0;
     char *backup_key;
-     char *backup_val;
+    char *backup_val;
     write_lock(&(loc->rwl));
     // key is present in the cache
     if (status == 2 || status == 3) {
@@ -112,9 +114,10 @@ void del(char *msg) {
     printf("del\n");
     char *key =  substring(msg, 0, KEY_SIZE);
 
-    struct entry_with_status entry_with_status_val = find_in_cache(key);
-    ENTRY *loc = entry_with_status_val.entry;
-    int status = entry_with_status_val.status;
+    struct entry_with_status *entry_with_status_val = find_in_cache(key);
+    ENTRY *loc = entry_with_status_val->entry;
+    int status = entry_with_status_val->status;
+    free(entry_with_status_val);
 
     if (status == 1) {
         write_lock(&(loc->rwl));
