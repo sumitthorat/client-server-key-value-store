@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
     struct epoll_event ev;
     while (1) {
         // Accept incoming connection
-        int clilen = sizeof(cli_addr);
+        socklen_t clilen = sizeof(cli_addr);
         ev.data.fd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
         printf("Accepted new connection: %d, assigned to WT = %d\n", cli_addr.sin_port, wt);
         
