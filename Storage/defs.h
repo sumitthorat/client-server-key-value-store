@@ -1,6 +1,7 @@
 #ifndef DEFS_H
 #define DEFS_H
 #include <stdio.h>
+#include "../RW_lock/rwlock.h"
 #define ENTRY struct cache_ENTRY
 
 /*
@@ -18,8 +19,8 @@ struct cache_ENTRY {
     char is_valid;
     char is_dirty;
     int freq;
-    int timestamp;
-    // struct rwlock rwl;
+    unsigned long timestamp;
+    struct rwlock rwl;
 };
 
 // Pointer to the starting of the cache. initialize_cache() allocates appropriate memory & initializes the cache

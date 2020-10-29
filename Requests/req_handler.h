@@ -43,11 +43,11 @@ char *get(char *msg) {
     if (entry) {
         printf("Got value =\"%s\"\n", entry->val);
         // Updating the timestamp & frequency after a get for the key.
-        entry->timestamp = (int)time(NULL);
-        entry->freq ++;
+        update_frequency_timestamp(entry);
         return entry->val;
     }
     else {
+        printf("Entry not present in cache, searching the PS\n");
         char *val = find_in_PS(key);
 
         // key is not present in the PS

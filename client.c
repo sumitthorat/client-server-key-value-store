@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
     // Read the config file
     read_config();
 
-    int np = 8;
+    int np = 2;
     // "np" clients
     for (int i = 0; i < np; ++i) {
         if (fork() == 0) {
@@ -59,10 +59,10 @@ void connect_send() {
     sprintf(mypid, "%d", pid);
 
 
-    int max = 5, count = 0;
+    int max = 2, count = 0;
     char* buff; 
     while (count < max) {
-        char buff[12] = "Hello";
+        char buff[12] = "2123";
         strcat(buff, mypid);
         printf("%s\n", buff);
 

@@ -1,3 +1,6 @@
+#ifndef RWLOCKS_H
+#define RWLOCKS_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -94,3 +97,5 @@ static void write_unlock (struct rwlock *rwl) {
     pthread_cond_broadcast(&rwl->read_wait);
     pthread_mutex_unlock(&rwl->mutex);
 }
+
+#endif // RWLOCKS_H
