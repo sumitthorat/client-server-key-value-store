@@ -1,15 +1,21 @@
+server:	Server
+	./Server
 
-server: server_main
-	./server
-client: client_main
-	./client
-test: test_main
-	./test
-server_main: server.c handle_reqs.h
-	gcc server.c handle_reqs.h -lpthread -o server
-client_main: client.c 
-	gcc client.c -o client
-test_main: test_client.c
-	gcc test_client.c -o test
+client:	Client
+	./Client
+
+Server: server.o
+	gcc server.o -o Server -lpthread 
+
+Client: client.o
+	gcc client.o -o Client -lpthread
+
+server.o: server.c RW_lock/rwlock.h Requests/req_handler.h Storage/cache.h
+	gcc -c server.c 
+
+client.o: client.c 
+	gcc -c client.c
+
 clean:
-	rm server client test
+	rm -f Server Client *.o a.out
+	echo -n "" > PS.txt

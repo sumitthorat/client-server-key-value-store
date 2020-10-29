@@ -11,7 +11,6 @@
 
 #include "RW_lock/rwlock.h"
 #include "Requests/req_handler.h"
-// #include "handle_reqs.h"
 
 int SERVER_PORT;
 int NUM_WORKER_THREADS;

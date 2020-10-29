@@ -1,19 +1,7 @@
 How to run server:
-    1) gcc server.c -lpthread -o server
-    2) ./server
-    or 
-    1) use command "make server"
+    use command "make server"
 
 How to run client:
-    1) gcc client.c -o client
-    2) ./client
-    or 
-    1) use command "make client"
-
-How to run test_client:
-    1) gcc test_client.c -o test
-    2) ./test
-    or 
-    1) use command "make test"
+    use command "make client"
 
 Note: Server port will be read from config.txt
