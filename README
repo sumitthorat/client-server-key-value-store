@@ -4,4 +4,7 @@ How to run server:
 How to run client:
     use command "make client"
 
+How to run test client:
+    use command "make test"
+
 Note: Server port will be read from config.txt
