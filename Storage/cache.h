@@ -3,8 +3,9 @@
 #include "ps.h"
 #include "defs.h"
 #include "../RW_lock/rwlock.h"
+#include <limits.h>
 
-#define INFINITE (long)1<<63
+#define INFINITE LONG_MAX
 
 extern ENTRY *cache_ptr;
 extern long CACHE_LEN;
@@ -27,7 +28,9 @@ void initialize_cache() {
         ENTRY *ptr = cache_ptr + i;
         ptr->is_valid = 'F'; 
         init_rwlock(&(ptr->rwl));
+        printf("Initialised lock at %p\n", ptr);
     }
+    printf("Size of entry: %ld\n", sizeof(ENTRY));
 }
 
 /*
@@ -40,11 +43,11 @@ struct entry_with_status *find_in_cache(char *key) {
     printf("find_in_cache\n");
 
     int status = 3; //by default status = 3
-    unsigned long oldest_timestamp = INFINITE;
+    unsigned long oldest_timestamp = LONG_MAX;
     ENTRY *entry = NULL;
     for (int i = 0; i < CACHE_LEN; i++) {
         ENTRY *loc = cache_ptr + i;
-        // printf("Trying for read lock at %p\n",loc);
+        
         read_lock(&(loc->rwl));
         // printf("Obtained read lock for %p\n",loc);
         if (loc->is_valid == 'T') {
@@ -57,12 +60,17 @@ struct entry_with_status *find_in_cache(char *key) {
                 break;
             }
         } else if (loc->is_valid == 'F') {
+            printf("At loc %p\n",loc);
+            printf("Status update to 2\n");
+            
             status = 2;
             entry = loc;
         }
-        // if we have already got an available cache line, don't try for LRU 
-        else if (status != 2 && loc->is_valid == 'T' && oldest_timestamp > loc->timestamp) {
-            oldest_timestamp = loc->timestamp;
+        // if we have already got an available cache line, don't try for LRU  1604035667498196
+        if ((status != 2 && status != 1) && loc->is_valid == 'T' && oldest_timestamp > loc->timestamp) {
+            printf("At loc %p\n",loc);
+            printf("Updating LRU block\n");
+            oldest_timestamp = (long int)loc->timestamp;
             entry = loc;
         }
 
@@ -88,7 +96,7 @@ void update_cache_line(ENTRY *loc, char *key, char *val) {
     loc->is_valid = 'T';
     loc->is_dirty = 'T';
     loc->timestamp = get_microsecond_timestamp();
-    printf("Updated entry: %s-%s(%d) \n", loc->key,loc->val, loc->freq);
+    printf("Updated entry at loc %p: %s-%s(%d) \n", loc, loc->key,loc->val, loc->freq);
 }
 
 void remove_from_cache(ENTRY *loc) {

@@ -37,6 +37,8 @@ char *handle_requests(char *msg) {
 char *get(char *msg) {
     printf("get\n");
     char *key = substring(msg, 0, KEY_SIZE);
+    key[KEY_SIZE]=(char)0;
+    printf("Key: %s\n", key);
     struct entry_with_status *entry_with_status_val = find_in_cache(key);
     ENTRY *loc = entry_with_status_val->entry;
     int status = entry_with_status_val->status;
@@ -47,7 +49,7 @@ char *get(char *msg) {
         int exit_if = 0;
         printf("Got value =\"%s\"\n", loc->val);
         write_lock(&(loc->rwl));
-        if (strcmp(loc->key, key) == 0)
+        if (strcmp(loc->key, key) == 0) //why are we comparing again within status 1?
             update_frequency_timestamp(loc); // Updating the timestamp & frequency after a get for the key.
         else
             exit_if = 1;
@@ -80,32 +82,44 @@ void put(char *msg) {
     printf("put\n");
     char *key = substring(msg, 0, KEY_SIZE);
     char *val = substring(msg, KEY_SIZE, KEY_SIZE + VAL_SIZE);
-
+    printf("Key: %s, value: %s\n", key,val);
     struct entry_with_status *entry_with_status_val = find_in_cache(key);
     ENTRY *loc = entry_with_status_val->entry;
     int status = entry_with_status_val->status;
     free(entry_with_status_val);
-
+    printf("Status : %d\n", status);
     int flag = 0;
     char *backup_key;
     char *backup_val;
     write_lock(&(loc->rwl));
     // key is present in the cache
-    if (status == 2 || status == 3) {
-        if (loc->is_valid == 'T' && loc->is_dirty == 'T') {
-            backup_key = loc->key;
-            backup_val = loc->val;
-            flag = 1;
-        }
+    // if (status == 2 || status == 3) {
+    //     if (loc->is_valid == 'T' && loc->is_dirty == 'T') {
+    //         backup_key = loc->key;
+    //         backup_val = loc->val;
+    //         flag = 1;
+    //     }
 
-        // Since we will do lazy update, currenly we don't care whether it is present in PS or not
-        update_cache_line(loc, key, val); 
+    //     // Since we will do lazy update, currenly we don't care whether it is present in PS or not
+    //     update_cache_line(loc, key, val); 
+    // }
+    
+    // if (flag) {
+    //     update_PS(backup_key, backup_val); 
+    // }
+    if (status==1 || status == 2)
+    {
+        update_cache_line(loc, key, val);
+    }
+    else if(status == 3)
+    {
+        backup_key = loc->key;
+        backup_val = loc->val;
+        update_cache_line(loc, key, val);
+        update_PS(backup_key, backup_val);
     }
     
-    if (flag) {
-        update_PS(backup_key, backup_val); 
-    }
-
+    
     write_unlock(&(loc->rwl)); //TODO: can we move this before update_PS ?
 }
 
