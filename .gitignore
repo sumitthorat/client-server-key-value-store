@@ -1,4 +1,5 @@
 config.txt
+Tests/client_config.txt
 a.out
 client
 server

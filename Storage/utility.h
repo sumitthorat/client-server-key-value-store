@@ -20,7 +20,7 @@
 char *substring(char *str, int start, int end);
 void error (char* msg);
 
-// Utility function to find substring of str
+// Utility function to find substring of str ie. str[start, end)
 char *substring(char *str, int start, int end) {
     int bytes = (end - start + 1);
     char *substr = (char *)malloc(bytes);
@@ -29,6 +29,7 @@ char *substring(char *str, int start, int end) {
         substr[i - start] = str[i];
     }
 
+    substr[end - start] = '\0';
     return substr;
 }
 
