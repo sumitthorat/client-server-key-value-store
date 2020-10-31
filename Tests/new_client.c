@@ -33,7 +33,7 @@ unsigned long get_microsecond_timestamp(){
 }
 
 void read_config(){
-    FILE* fptr = fopen("Tests/client_config.txt", "r");
+    FILE* fptr = fopen("client_config.txt", "r");
     size_t read, len;
     char * line = NULL;
     while ((read = getline(&line, &len, fptr)) != -1) {

@@ -16,6 +16,7 @@ int SERVER_PORT;
 int NUM_WORKER_THREADS;
 int* worker_epoll_fds;
 int sockfd;
+struct hash *table = NULL;
 pthread_mutex_t mutex;
 
 void read_config();
@@ -35,7 +36,7 @@ int main(int argc, char** argv) {
     initialize_cache();
     
     //TODO:Create Global Hash Table
-    
+    table = createHashTable();
     // Mutex required for inserting/deleting from Global Hash Table
     pthread_mutex_init(&mutex, NULL);
     
@@ -109,7 +110,7 @@ int main(int argc, char** argv) {
 void* worker(void* arg) {
     int id = *((int*)arg);
     //TODO: create queue
-
+    struct Queue *Q = createQueue();
     printf("Thread %d is ready\n", id);
 
 
@@ -146,40 +147,41 @@ void* worker(void* arg) {
 
                 // if any other thread is handling PUT request with same key, then don't handle that now
                 // Add that PUT request to a queue. Handle that later
-                if (searchInHash(table, key)) == false) //check global hash table
+                if (!searchInHash(table, key)) //check global hash table
+                   {
                     insertToHash(table, key);
                     pthread_mutex_unlock(&mutex);
                     handle_requests(buff);
                     pthread_mutex_lock(&mutex);
                     deleteFromHash(table, key);
+                   } 
                 else {
-                    struct Node *node = (struct Node *)malloc(struct Node);
-                    push(queue, node);
+                    add(Q, buff, events[i].data.fd);
                 }
                 pthread_mutex_unlock(&mutex);
             }
 
-            handle_requests(buff); // Here request will be parsed and appropriate action will be taken
+            // handle_requests(buff); // Here request will be parsed and appropriate action will be taken
         }
 
         // handle the queued PUT requests before starting the next round of epoll_wait()
-        while(!isEmpty(queue)) {    
-            struct Node *item = top(queue);
+        while(!isEmpty(Q)) {
+            char *key;
+            struct QueueNode *item = top(Q);
             pthread_mutex_lock(&mutex);
-            key = substring(temp->req, 1, KEY_SIZE + 1);
-            found = searchInHash(table, key);
-            if (!found) {
-                insertToHash(key);
+            key = substring(item->req, 1, KEY_SIZE + 1);
+            if (!searchInHash(table, key)) {
+                insertToHash(table,key);
                 pthread_mutex_unlock(&mutex);
-                handle_req(buff);
+                handle_requests(buff);
                 pthread_mutex_lock(&mutex);
-                deleteFromHash(key);
+                deleteFromHash(table,key);
                 pthread_mutex_unlock(&mutex);
-                dequeue(queue);
+                pop(Q);
             }
-            else if (queue.size() != 1) {
-                queue.pop()
-                queue.add(item);
+            else if (size(Q) != 1) {
+                pop(Q);
+                add(Q, item->req,item->clientFd);
             }         
         }
     }
