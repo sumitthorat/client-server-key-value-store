@@ -9,13 +9,14 @@
 #include <netinet/in.h>
 #include <signal.h>
 
-// #include "RW_lock/rwlock.h"
+#include "DS_Utilities/ds_defs.h"
 #include "Requests/req_handler.h"
 
 int SERVER_PORT;
 int NUM_WORKER_THREADS;
 int* worker_epoll_fds;
 int sockfd;
+pthread_mutex_t mutex;
 
 void read_config();
 void* worker(void*);
@@ -32,6 +33,11 @@ int main(int argc, char** argv) {
     // Read config file
     read_config();
     initialize_cache();
+    
+    //TODO:Create Global Hash Table
+    
+    // Mutex required for inserting/deleting from Global Hash Table
+    pthread_mutex_init(&mutex, NULL);
     
     struct sockaddr_in serv_addr, cli_addr;
 
@@ -102,6 +108,7 @@ int main(int argc, char** argv) {
 
 void* worker(void* arg) {
     int id = *((int*)arg);
+    //TODO: create queue
 
     printf("Thread %d is ready\n", id);
 
@@ -129,9 +136,51 @@ void* worker(void* arg) {
 
             printf("\n");
             printf("WT = %d, MSG = %s\n", id, buff);
-            
-            handle_requests(buff);
-            // Here request will be parsed and appropriate action will be taken
+
+            if (buff[0] == '1' || buff[0] == '3') {
+                handle_requests(buff);
+            } else { 
+                char *key = substring(buff, 1, KEY_SIZE + 1); 
+                char *val = substring(buff, KEY_SIZE + 1, KEY_SIZE + VAL_SIZE + 1); 
+                pthread_mutex_lock(&mutex);
+
+                // if any other thread is handling PUT request with same key, then don't handle that now
+                // Add that PUT request to a queue. Handle that later
+                if (searchInHash(table, key)) == false) //check global hash table
+                    insertToHash(table, key);
+                    pthread_mutex_unlock(&mutex);
+                    handle_requests(buff);
+                    pthread_mutex_lock(&mutex);
+                    deleteFromHash(table, key);
+                else {
+                    struct Node *node = (struct Node *)malloc(struct Node);
+                    push(queue, node);
+                }
+                pthread_mutex_unlock(&mutex);
+            }
+
+            handle_requests(buff); // Here request will be parsed and appropriate action will be taken
+        }
+
+        // handle the queued PUT requests before starting the next round of epoll_wait()
+        while(!isEmpty(queue)) {    
+            struct Node *item = top(queue);
+            pthread_mutex_lock(&mutex);
+            key = substring(temp->req, 1, KEY_SIZE + 1);
+            found = searchInHash(table, key);
+            if (!found) {
+                insertToHash(key);
+                pthread_mutex_unlock(&mutex);
+                handle_req(buff);
+                pthread_mutex_lock(&mutex);
+                deleteFromHash(key);
+                pthread_mutex_unlock(&mutex);
+                dequeue(queue);
+            }
+            else if (queue.size() != 1) {
+                queue.pop()
+                queue.add(item);
+            }         
         }
     }
 }
