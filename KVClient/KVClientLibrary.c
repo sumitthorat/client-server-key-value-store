@@ -71,8 +71,6 @@ int del(char* key, char** error, int serverfd) {
     char* resp = (char*) malloc(sizeof(char) * RSIZE);
     int readn = read(serverfd, resp, RSIZE);
 
-    printf("Resp from sv: %s\n", resp);
-
     // Malloc error memory
     if (readn <= 0 || resp[0] == ERROR) {
         *error = (char*) malloc(sizeof(char) * KV_LEN);
