@@ -1,109 +1,347 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 #include <arpa/inet.h> 
 #include <netdb.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
+#include <pthread.h>
+
+#include "../KVClient/KVClientLibrary.h"
 
 #define MSG_SIZE 9
-#define KEY_SIZE 4
-#define VAL_SIZE 4
 
 int SERVER_PORT;
-long CACHE_LEN;
-int NUM_WORKER_THREADS;
+char *SERVER_IP;
+int NUM_OF_GET;
+int NUM_OF_PUT;
+int NUM_OF_DEL;
+int NUM_OF_CLIENTS;
+int NUM_OF_INTIAL_ENTRIES;
 
-void connect_send();
-void read_config();
-void error(char *msg)
-{
-    perror(msg);
-    exit(1);
+pthread_mutex_t lock; 
+
+char *key_values[1000];
+
+unsigned long get_microsecond_timestamp(){
+    struct timeval tv;
+    gettimeofday(&tv,NULL);
+    unsigned long time_in_micros = 1000000 * tv.tv_sec + tv.tv_usec;
+    return time_in_micros;
 }
 
-int main(int argc, char** argv) {
-    // Read the config file
-    read_config();
+// Utility function to find substring of str
+char *substring(char *str, int start, int end) {
+    int bytes = (end - start + 1);
+    char *substr = (char *)malloc(bytes);
 
-    connect_send();
-           
-    return 0;
-}
-
-void connect_send() {
-    int sockfd, n;
-    struct sockaddr_in serv_addr;
-
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
-        error("ERROR opening socket");
+    for (int i = start; i < end; i++) {
+        substr[i - start] = str[i];
     }
+
+    return substr;
+}
+
+void read_config(){
+    FILE* fptr = fopen("Tests/client_config.txt", "r");
+    size_t read, len;
+    char * line = NULL;
+    while ((read = getline(&line, &len, fptr)) != -1) {
+        char * token = strtok(line, "=");
         
+        while( token != NULL ) {
+            if (strcmp(token, "SERVER_PORT")==0)
+            {
+                token = strtok(NULL, "=");
+                SERVER_PORT = atoi(token);
+            }
+            else if (strcmp(token,"SERVER_IP")==0)
+            {
+                token = strtok(NULL, "=");
+                
+                SERVER_IP = strdup(token);
+                
+            }
+            else if (strcmp(token,"NO_OF_GET")==0)
+            {
+                token = strtok(NULL, "=");
+                NUM_OF_GET=  atoi(token);
+            }
+            else if (strcmp(token, "NO_OF_PUT")==0)
+            {
+                token = strtok(NULL, "=");
+                NUM_OF_PUT=  atoi(token);
+            }
+            else if (strcmp(token , "NO_OF_DEL")==0)
+            {
+                token = strtok(NULL, "=");
+                NUM_OF_DEL=  atoi(token);
+            }
+            else if (strcmp(token , "NO_OF_CLIENTS")==0)
+            {
+                token = strtok(NULL, "=");
+                NUM_OF_CLIENTS=  atoi(token);
+            }
+            else if (strcmp(token , "NO_OF_INITIAL_ENTRIES")==0)
+            {
+                token = strtok(NULL, "=");
+                NUM_OF_INTIAL_ENTRIES=  atoi(token);
+            }
+            else
+            {
+                token = strtok(NULL, "=");
+            }  
+        } 
+    }
+    printf("Phase 1...\n");
+    printf("Reading from config file...\n");
+    printf("SERVER_PORT: %d\n", SERVER_PORT);
+    printf("SERVER_IP: %s", SERVER_IP);
+    printf("NO_OF_GETS: %d\n", NUM_OF_GET);
+    printf("NO_OF_PUTS: %d\n", NUM_OF_PUT);
+    printf("NO_OF_DELS: %d\n", NUM_OF_DEL);
+    printf("NO_OF_CLIENTS: %d\n", NUM_OF_CLIENTS);
+    printf("NO_OF_INITIAL_ENTRIES: %d\n", NUM_OF_INTIAL_ENTRIES);
+    printf("\n");
+    fclose(fptr);
+}
+
+
+int connect_to_server(){
+    int sockfd;
+    struct sockaddr_in serv_addr;
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd<0)
+    {
+        printf("No sock only\n");
+    }
+    
+    // memset((char*)&serv_addr,0,sizeof(serv_addr));
     bzero((char *) &serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
     serv_addr.sin_port = htons(SERVER_PORT);
-
     if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-        error("ERROR connecting");
+        herror("ERROR connecting");
+        fprintf(stderr, "connect() failed: %s\n", strerror(errno));
+        exit(1);
     }
-    printf("Connected\n");
-    char* buff; 
-    while (1) {
-        char key[KEY_SIZE], val[VAL_SIZE];
-        char buff[MSG_SIZE + 1];
-        int status;
-        printf("Enter op status, Key & val\n");
-        // scanf("%d %s %s", &status, key, val);
-        scanf("%s", buff);
-        
-        // sprintf(buff, "%c%s%s", '0' + status, key, val);
-        printf("Buff is: %s\n",buff);
-        buff[MSG_SIZE] = '\0';
 
-        n = write(sockfd, buff, MSG_SIZE);
-        printf("Sent Msg: %s\n", buff);
-        if (n < 0) {
-            error("Error writing to socket");
+    return sockfd;
+}
+
+void close_connection(int sockfd){
+    close(sockfd);
+}
+
+void send_get_message(int t_id, int sockfd){
+    pthread_mutex_lock(&lock);
+    int ridx = random() % NUM_OF_INTIAL_ENTRIES;
+    pthread_mutex_unlock(&lock);
+
+    char *key, *val, *error;
+    char* message = key_values[ridx];
+    key = substring(message, 0, 4);
+   
+    printf("Sending GET request, key = %s\n", key);
+    int code = get(key, &val, &error, sockfd);
+
+    if (code == 0) {
+        printf("Response = %s:%s (Successful GET)\n", key, val);
+    } else {
+        printf("Err w/ K= %s\n", error);
+    }
+}
+
+void swap(char a[], char b[]) {
+    char temp[RSIZE - 1]; // RSIZE - 1 to ignore status code
+    strcpy(temp, a);
+    strcpy(a, b);
+    strcpy(b, temp);
+}
+
+void send_del_message(int t_id, int sockfd){
+
+    char *key, *val, *error;
+    pthread_mutex_lock(&lock);
+    int ridx = random() % NUM_OF_INTIAL_ENTRIES;
+    // swap(key_values + ridx, key_values + NUM_OF_INTIAL_ENTRIES - 1);
+    // NUM_OF_INTIAL_ENTRIES--;
+    pthread_mutex_unlock(&lock);
+
+    char* message = key_values[ridx];
+
+
+    key = substring(message, 0, 4);
+    printf("Sending DEL request, key = %s\n", key);
+    int code = del(key, &error, sockfd);
+
+    if (code == 0) {
+        printf("Response = %s (Successful DEL)\n", key);
+    } else {
+        printf("Err w/ K= %s\n", error);
+    }
+
+}
+
+void send_put_message(int t_id, int sockfd){
+    pthread_mutex_lock(&lock);
+    int ridx = random() % NUM_OF_INTIAL_ENTRIES;
+    pthread_mutex_unlock(&lock);
+
+    char *key, *val, *error;
+    char* message = key_values[ridx];
+
+    key = substring(message, 0, 4);
+    val = substring(message, 4, 8);
+
+    printf("Sending PUT request, key = %s\n", key);
+    int code = put(key, val, &error, sockfd);
+
+    if (code == 0) {
+        printf("Response = %s:%s (Successful PUT)\n", key, val);
+    } else {
+        printf("Err w/ K= %s\n", error);
+    }
+
+
+}
+
+
+
+//Phase 1 read the config
+//Phase 2 populate the KV store
+// Phase 3 Get(To do the get and put, ) and put
+
+void populate_kv_store(int sockfd){
+    char message[MSG_SIZE];
+    int n, i=0;
+    printf("Phase 2...\n");
+    printf("Populating the KV store with below messages...\n");
+    while (i<NUM_OF_INTIAL_ENTRIES)
+    {
+        for (int i=0; i<MSG_SIZE; i++)
+            message[i] = 'A' + random() % 26;
+
+        message[MSG_SIZE - 1] = (char)0;
+        key_values[i] =  strdup(message);
+        printf("Key Val: %s\n",message);
+        
+
+        char *key, *val, *error;
+        key = substring(message, 0, 4);
+        val = substring(message, 4, 8);
+        int code = put(key, val, &error, sockfd);
+
+        if (code < 0) {
+            printf("Err w/ K = %s\n", error ? "Some socket error" : error);
+        }
+
+        i++;
+    }
+    printf("\n");
+}
+
+
+void *thread_fun(void *args){
+    // int *t_id = (int *)args;
+    int t_id = *((int *) args);
+    // int id=*t_id;
+    int sockfd = connect_to_server();
+    int get=NUM_OF_GET;
+    int put=NUM_OF_PUT;
+    int del=NUM_OF_DEL;
+    printf("Thread-%d initialised...\n", t_id);
+    //Creating a seed (Right now not calling delete)
+    while (get||put||del)
+    {
+        /* code */
+        srand((int)get_microsecond_timestamp());
+        int random_num;
+        if (get && put && del)
+        {
+            /* code */
+            random_num = rand()%3 + 1;
+        }
+        else if ((get && put)||(get && del)||(put && put))
+        {
+            /* code */
+            random_num = rand()%2 + 1;
+        }
+        else if(get)
+        {
+            random_num=1;
+        }else if(put){
+            random_num=2;
+        }else if(del){
+            random_num=3;
+        }
+        switch(random_num) {
+        case 1:
+            if (get)
+            {
+                send_get_message(t_id, sockfd);
+                get--;
+            }
+            break;
+        case 2:
+            if (put)
+            {
+                send_put_message(t_id, sockfd);
+                put--;
+            }
+            break;
+        case 3:
+            if (del)
+            {
+                send_del_message(t_id, sockfd);
+                del--;
+            }
+            break;
+        default:
+            return "Error: invalid option";
         }
     }
-
-    close(sockfd);
-
-    printf("Done...\n");
+    close_connection(sockfd);
 }
 
-void read_config() {
-    // Open config file
-    FILE* fptr = fopen("config.txt", "r");
-    if (fptr == NULL) {
-        error("Could not open config file");
+
+int main(){
+    int socket;
+    read_config();
+    socket = connect_to_server();
+
+    populate_kv_store(socket);
+    close_connection(socket);
+
+    sleep(1);
+
+    //Create clients here
+    if (pthread_mutex_init(&lock, NULL) != 0) { 
+        printf("\n mutex init has failed\n"); 
+        return 1; 
+    } 
+    pthread_t thread_id[NUM_OF_CLIENTS];
+
+    printf("Phase 3...\n");
+    printf("Starting the requests...\n");
+    int args[NUM_OF_CLIENTS];
+    for (size_t i = 0; i < NUM_OF_CLIENTS; i++)
+    {
+        args[i]=i+1;
+        pthread_create(&thread_id[i], NULL, thread_fun, &args[i]); 
     }
 
-    /* 
-        Read info from config file
-        1. Server listening port
-        2. No. of worker threads (n)
-        3. Maximum entries in the cache
-    */
-
-    char buff[256];
-    int buff_len = 256;
-    // TODO: Handle error if required
-    if (fgets(buff, buff_len, fptr) != NULL) {
-        SERVER_PORT = atoi(buff);
+    for (size_t j = 0; j < NUM_OF_CLIENTS; j++)
+    {
+        pthread_join(thread_id[j],NULL);
     }
+    printf("\n");
+        
 
-    if (fgets(buff, buff_len, fptr) != NULL) {
-        NUM_WORKER_THREADS = atoi(buff);
-    }
-
-    if (fgets(buff, buff_len, fptr) != NULL) {
-        CACHE_LEN = atol(buff);
-    }
-
-    fclose(fptr);
 }
+

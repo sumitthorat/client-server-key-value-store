@@ -1,5 +1,5 @@
-config.txt
-Tests/client_config.txt
+# config.txt
+# Tests/client_config.txt
 a.out
 client
 server
@@ -8,3 +8,4 @@ demo*
 *copy*
 PS.txt
 test
+.vscode
