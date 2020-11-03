@@ -157,20 +157,15 @@ void send_get_message(int t_id, int sockfd){
     }
 }
 
-void swap(char a[], char b[]) {
-    char temp[RSIZE - 1]; // RSIZE - 1 to ignore status code
-    strcpy(temp, a);
-    strcpy(a, b);
-    strcpy(b, temp);
-}
+
 
 void send_del_message(int t_id, int sockfd){
 
     char *key, *val, *error;
     pthread_mutex_lock(&lock);
     int ridx = random() % NUM_OF_INTIAL_ENTRIES;
-    // swap(key_values + ridx, key_values + NUM_OF_INTIAL_ENTRIES - 1);
-    // NUM_OF_INTIAL_ENTRIES--;
+    key_values[ridx] = key_values[NUM_OF_INTIAL_ENTRIES - 1];
+    NUM_OF_INTIAL_ENTRIES--;
     pthread_mutex_unlock(&lock);
 
     char* message = key_values[ridx];

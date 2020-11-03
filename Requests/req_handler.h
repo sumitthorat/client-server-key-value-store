@@ -133,9 +133,10 @@ void del(char *msg, char* resp) {
 
     struct entry_with_status *entry_with_status_val = find_update_cache_line(key, NULL, 3);
 
-    printf("Entry %s\n", entry_with_status_val->entry->val);
+    // printf("Entry %s\n", entry_with_status_val->entry->val ? entry_with_status_val->entry->val : "NULL");
 
-    SET_MSG(resp, SUCCESS_CODE, key, entry_with_status_val->entry->val); 
+    // TODO: Change the second param to success/error
+    SET_MSG(resp, SUCCESS_CODE, key, "NULL"); 
     
     free(entry_with_status_val);
     remove_from_PS(key);
