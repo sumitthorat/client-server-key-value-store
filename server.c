@@ -105,6 +105,8 @@ void* worker(void* arg) {
 
     printf("Thread %d is ready\n", id);
 
+    // Space for response
+    char* resp = (char*) malloc(sizeof(char) * MSG_SIZE);
 
     // // Probe the file descriptors
     struct epoll_event events[8];
@@ -115,6 +117,9 @@ void* worker(void* arg) {
 
         char buff[9];
         int buff_len = 9; 
+
+        char* resp = (char*) malloc(sizeof(char) * MSG_SIZE);
+
         for (int i = 0; i < nfds; ++i) {
             memset(buff, 0, buff_len);
             ssize_t len = read(events[i].data.fd, buff, buff_len);
@@ -130,15 +135,16 @@ void* worker(void* arg) {
             printf("\n");
             printf("WT = %d, MSG = %s\n", id, buff);
             
-            handle_requests(buff);
-            // Here request will be parsed and appropriate action will be taken
+            handle_requests(buff, resp);
+            printf("Resp: %s\n", resp);
+            size_t write_len = write(events[i].data.fd, resp, MSG_SIZE);
         }
     }
 }
 
 void read_config() {
     // Open config file
-    FILE* fptr = fopen("config.txt", "r");
+    FILE* fptr = fopen("server_config.txt", "r");
     if (fptr == NULL) {
         error("Could not open config file");
     }

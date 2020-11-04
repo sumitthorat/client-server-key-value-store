@@ -5,6 +5,6 @@ How to run client:
     use command "make client"
 
 How to run test client:
-    use command "make test"
+    use command "make run_test_client"
 
 Note: Server port will be read from config.txt

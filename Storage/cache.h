@@ -122,7 +122,7 @@ void update_cache_line(ENTRY *loc, char *key, char *val) {
 }
 
 void remove_from_cache(ENTRY *loc) {
-    printf("remove_from_cache\n");
+    printf("remove_from_cache, loc = %p\n", loc);
     loc->is_valid = 'F';
     loc->freq = 0;
 }
