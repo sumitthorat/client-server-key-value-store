@@ -1,5 +1,17 @@
 #include "ds_defs.h"
 
+int getHashingIndex(char *key){
+    long int sum=0;
+    for (size_t i = 0; i < HASH_NUMBER; i++)
+    {
+        long int temp = (key[i] & NUM)-1;
+        temp = pow(temp,i);
+        sum += temp; 
+    }
+    int hashIndex = sum % BUCKETS;
+    return hashIndex;
+}
+
   struct node * createNode(char *key) {
         struct node *newnode;
         newnode = (struct node *)malloc(sizeof(struct node));
@@ -9,15 +21,8 @@
   }
 
   void insertToHash(struct hash* hashTable, char *key) {
-        int sum=0;
-        for (size_t i = 0; i < HASH_NUMBER; i++)
-        {
-            int temp = (key[i] & NUM)-1;
-            sum += temp;      
-        }
-        int hashIndex = sum % (HASH_NUMBER*26);
+        int hashIndex = getHashingIndex(key);
         struct node *newnode =  createNode(key);
-        
         /* head of list for the bucket with index "hashIndex" */
         if (!hashTable[hashIndex].head) {
                 hashTable[hashIndex].head = newnode;
@@ -37,14 +42,7 @@
 
   void deleteFromHash(struct hash* hashTable,char *key) {
         /* find the bucket using hash index */
-       int sum=0, flag = 0;;
-        for (size_t i = 0; i < HASH_NUMBER; i++)
-        {
-            int temp = (key[i] & NUM)-1;
-            sum += temp;      
-        }
-      
-        int hashIndex = sum % (HASH_NUMBER*26);
+        int hashIndex = getHashingIndex(key);
         
         struct node *temp, *myNode;
         /* get the list head from current bucket */
@@ -76,13 +74,7 @@
   }
 
   char *searchInHash(struct hash* hashTable,char *key) {
-        int sum=0,flag;
-        for (size_t i = 0; i < HASH_NUMBER; i++)
-        {
-            int temp = (key[i] & NUM)-1;
-            sum += temp;      
-        }
-        int hashIndex = sum % (HASH_NUMBER*26);
+        int hashIndex = getHashingIndex(key);
         struct node *myNode;
         myNode = hashTable[hashIndex].head;
         if (!myNode) {
@@ -99,16 +91,16 @@
         return NULL;
   }
 
-  struct hash* createHashTable(unsigned buckets) 
+  struct hash* createHashTable() 
 { 
-	struct hash* hashTable = (struct hash*)malloc(buckets*sizeof(struct hash)); 
+	struct hash* hashTable = (struct hash*)malloc(BUCKETS*sizeof(struct hash)); 
 	return hashTable; 
 } 
 
 //   void display(struct hash* hashTable) {
 //         struct node *myNode;
 //         int i;
-//         for (i = 0; i < HASH_NUMBER*4; i++) {
+//         for (i = 0; i < BUCKETS; i++) {
 //                 if (hashTable[i].count == 0)
 //                         continue;
 //                 myNode = hashTable[i].head;
@@ -126,15 +118,15 @@
 //   }
 
 // int main(){
-//     struct hash *table = createHashTable(HASH_NUMBER*26);
-//     printf("Loc %p\n",table);
+//     struct hash *table = createHashTable();
+//     // printf("Loc %p\n",table);
 //     insertToHash(table, "CCCA");
 //     insertToHash(table, "ABCD");
-//     insertToHash(table, "DDAA");
+//     // insertToHash(table, "DDAA");
 //     display(table);
 //     // printf("At postion 6: %d\n", table[6].count);
 //     deleteFromHash(table, "ABCD");
-//     display(table);
+//     // display(table);
 //     // printf("At postion 6: %d\n", table[6].count);
 //     // printf("Key: %s\n",searchInHash(table, "DDAA"));
 //     deleteFromHash(table, "DDAA");
