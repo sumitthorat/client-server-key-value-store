@@ -48,13 +48,7 @@ void get(char *msg, char* resp) {
     printf("get\n");
 
     char *key = substring(msg, 0, KEY_SIZE);
-<<<<<<< HEAD
-    key[KEY_SIZE]=(char)0;
-    printf("Key: %s\n", key);
-    struct entry_with_status *entry_with_status_val = find_in_cache(key);
-=======
     struct entry_with_status *entry_with_status_val = find_update_cache_line(key, NULL, 1);
->>>>>>> master
     ENTRY *loc = entry_with_status_val->entry;
     int status = entry_with_status_val->status;
     free(entry_with_status_val);
@@ -62,29 +56,9 @@ void get(char *msg, char* resp) {
     // key is present in the cache
     if (status == 1) {
         printf("Got value =\"%s\"\n", loc->val);
-<<<<<<< HEAD
-        write_lock(&(loc->rwl));
-        if (strcmp(loc->key, key) == 0) //why are we comparing again within status 1?
-            update_frequency_timestamp(loc); // Updating the timestamp & frequency after a get for the key.
-        else
-            exit_if = 1;
-
-        write_unlock(&(loc->rwl));
-
-        if (!exit_if) {
-            free(key);
-            return loc->val;
-        }    
-    }
-    
-    printf("Entry not present in cache, searching the PS\n");
-    char *val = find_in_PS(key);
-    free(key);
-=======
         
         // sprintf(resp, "4%s%s", key, loc->val); 
         SET_MSG(resp, SUCCESS_CODE, key, loc->val);
->>>>>>> master
 
         free(key);
 
@@ -114,14 +88,6 @@ void put(char *msg, char* resp) {
     printf("put\n");
     char *key = substring(msg, 0, KEY_SIZE);
     char *val = substring(msg, KEY_SIZE, KEY_SIZE + VAL_SIZE);
-<<<<<<< HEAD
-    printf("Key: %s, value: %s\n", key,val);
-    struct entry_with_status *entry_with_status_val = find_in_cache(key);
-    ENTRY *loc = entry_with_status_val->entry;
-    int status = entry_with_status_val->status;
-    free(entry_with_status_val);
-    printf("Status : %d\n", status);
-=======
 
     struct entry_with_status *entry_with_status_val = find_update_cache_line(key, val, 2);
     ENTRY *loc = entry_with_status_val->entry;
@@ -134,7 +100,6 @@ void put(char *msg, char* resp) {
         return;
     }
         
->>>>>>> master
     int flag = 0;
     char *backup_key;
     char *backup_val;

@@ -3,13 +3,7 @@
 #include "ps.h"
 #include "defs.h"
 #include "../RW_lock/rwlock.h"
-<<<<<<< HEAD
-#include <limits.h>
-
-#define INFINITE LONG_MAX
-=======
 #include <limits.h> // for LONG_MAX
->>>>>>> master
 
 extern ENTRY *cache_ptr;
 extern long CACHE_LEN;
@@ -58,13 +52,8 @@ struct entry_with_status *find_update_cache_line(char *key, char *val, int req) 
     ENTRY *entry = NULL;
     for (int i = 0; i < CACHE_LEN; i++) {
         ENTRY *loc = cache_ptr + i;
-<<<<<<< HEAD
-        
-        read_lock(&(loc->rwl));
-=======
         // printf("Trying for read lock at %p\n",loc);
         write_lock(&(loc->rwl));
->>>>>>> master
         // printf("Obtained read lock for %p\n",loc);
         if (loc->is_valid == 'T' && (strcmp(loc->key, key) == 0)) {
             // printf("(cache) Found: %s\n", loc->key);
