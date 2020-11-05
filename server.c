@@ -9,13 +9,15 @@
 #include <netinet/in.h>
 #include <signal.h>
 
-// #include "RW_lock/rwlock.h"
+#include "DS_Utilities/ds_defs.h"
 #include "Requests/req_handler.h"
 
 int SERVER_PORT;
 int NUM_WORKER_THREADS;
 int* worker_epoll_fds;
 int sockfd;
+struct hash *table = NULL;
+pthread_mutex_t mutex;
 
 void read_config();
 void* worker(void*);
@@ -32,6 +34,11 @@ int main(int argc, char** argv) {
     // Read config file
     read_config();
     initialize_cache();
+    initialise_file_index();
+    //TODO:Create Global Hash Table
+    table = createHashTable();
+    // Mutex required for inserting/deleting from Global Hash Table
+    pthread_mutex_init(&mutex, NULL);
     
     struct sockaddr_in serv_addr, cli_addr;
 
@@ -102,9 +109,12 @@ int main(int argc, char** argv) {
 
 void* worker(void* arg) {
     int id = *((int*)arg);
-
+    //TODO: create queue
+    struct Queue *Q = createQueue();
     printf("Thread %d is ready\n", id);
 
+    // Space for response
+    char* resp = (char*) malloc(sizeof(char) * MSG_SIZE);
 
     // // Probe the file descriptors
     struct epoll_event events[8];
@@ -115,6 +125,9 @@ void* worker(void* arg) {
 
         char buff[9];
         int buff_len = 9; 
+
+        char* resp = (char*) malloc(sizeof(char) * MSG_SIZE);
+
         for (int i = 0; i < nfds; ++i) {
             memset(buff, 0, buff_len);
             ssize_t len = read(events[i].data.fd, buff, buff_len);
@@ -129,16 +142,59 @@ void* worker(void* arg) {
 
             printf("\n");
             printf("WT = %d, MSG = %s\n", id, buff);
-            
-            handle_requests(buff);
-            // Here request will be parsed and appropriate action will be taken
+
+            if (buff[0] == '1' || buff[0] == '3') {
+                handle_requests(buff, resp);
+            } else { 
+                char *key = substring(buff, 1, KEY_SIZE + 1); 
+                char *val = substring(buff, KEY_SIZE + 1, KEY_SIZE + VAL_SIZE + 1); 
+                pthread_mutex_lock(&mutex);
+
+                // if any other thread is handling PUT request with same key, then don't handle that now
+                // Add that PUT request to a queue. Handle that later
+                if (!searchInHash(table, key)) //check global hash table
+                   {
+                    insertToHash(table, key);
+                    pthread_mutex_unlock(&mutex);
+                    handle_requests(buff,resp);
+                    pthread_mutex_lock(&mutex);
+                    deleteFromHash(table, key);
+                   } 
+                else {
+                    add(Q, buff, events[i].data.fd);
+                }
+                pthread_mutex_unlock(&mutex);
+            }
+            while(!isEmpty(Q)) {
+                char *key;
+                struct QueueNode *item = top(Q);
+                pthread_mutex_lock(&mutex);
+                key = substring(item->req, 1, KEY_SIZE + 1);
+                if (!searchInHash(table, key)) {
+                    insertToHash(table,key);
+                    pthread_mutex_unlock(&mutex);
+                    handle_requests(buff, resp);
+                    pthread_mutex_lock(&mutex);
+                    deleteFromHash(table,key);
+                    pthread_mutex_unlock(&mutex);
+                    pop(Q);
+                }
+                else if (size(Q) != 1) {
+                    pop(Q);
+                    add(Q, item->req,item->clientFd);
+                }         
+            }
+            printf("Resp: %s\n", resp);
+            size_t write_len = write(events[i].data.fd, resp, MSG_SIZE);
+            // handle_requests(buff); // Here request will be parsed and appropriate action will be taken
         }
+        // handle the queued PUT requests before starting the next round of epoll_wait()
     }
 }
 
 void read_config() {
     // Open config file
-    FILE* fptr = fopen("config.txt", "r");
+    FILE* fptr = fopen("server_config.txt", "r");
     if (fptr == NULL) {
         error("Could not open config file");
     }
