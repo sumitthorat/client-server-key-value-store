@@ -144,7 +144,11 @@ void* worker(void* arg) {
             printf("WT = %d, MSG = %s\n", id, buff);
 
             if (buff[0] == '1' || buff[0] == '3') {
+<<<<<<< HEAD
                 handle_requests(buff, resp);
+=======
+                handle_requests(buff);
+>>>>>>> queueing
             } else { 
                 char *key = substring(buff, 1, KEY_SIZE + 1); 
                 char *val = substring(buff, KEY_SIZE + 1, KEY_SIZE + VAL_SIZE + 1); 
@@ -156,7 +160,11 @@ void* worker(void* arg) {
                    {
                     insertToHash(table, key);
                     pthread_mutex_unlock(&mutex);
+<<<<<<< HEAD
                     handle_requests(buff,resp);
+=======
+                    handle_requests(buff);
+>>>>>>> queueing
                     pthread_mutex_lock(&mutex);
                     deleteFromHash(table, key);
                    } 
@@ -165,8 +173,12 @@ void* worker(void* arg) {
                 }
                 pthread_mutex_unlock(&mutex);
             }
+<<<<<<< HEAD
             printf("Resp: %s\n", resp);
             size_t write_len = write(events[i].data.fd, resp, MSG_SIZE);
+=======
+
+>>>>>>> queueing
             // handle_requests(buff); // Here request will be parsed and appropriate action will be taken
         }
 
@@ -179,7 +191,11 @@ void* worker(void* arg) {
             if (!searchInHash(table, key)) {
                 insertToHash(table,key);
                 pthread_mutex_unlock(&mutex);
+<<<<<<< HEAD
                 handle_requests(buff, resp);
+=======
+                handle_requests(buff);
+>>>>>>> queueing
                 pthread_mutex_lock(&mutex);
                 deleteFromHash(table,key);
                 pthread_mutex_unlock(&mutex);
