@@ -26,7 +26,9 @@ void initialize_cache() {
         ENTRY *ptr = cache_ptr + i;
         ptr->is_valid = 'F'; 
         init_rwlock(&(ptr->rwl));
+        printf("Initialised lock at %p\n", ptr);
     }
+    printf("Size of entry: %ld\n", sizeof(ENTRY));
 }
 
 /*
@@ -87,12 +89,17 @@ struct entry_with_status *find_update_cache_line(char *key, char *val, int req) 
                 return ret;
             }
         } else if (loc->is_valid == 'F') {
+            printf("At loc %p\n",loc);
+            printf("Status update to 2\n");
+            
             status = 2;
             entry = loc;
         }
-        // if we have already got an available cache line, don't try for LRU 
-        else if (status != 2 && loc->is_valid == 'T' && oldest_timestamp > loc->timestamp) {
-            oldest_timestamp = loc->timestamp;
+        // if we have already got an available cache line, don't try for LRU  1604035667498196
+        if ((status != 2 && status != 1) && loc->is_valid == 'T' && oldest_timestamp > loc->timestamp) {
+            printf("At loc %p\n",loc);
+            printf("Updating LRU block\n");
+            oldest_timestamp = (long int)loc->timestamp;
             entry = loc;
         }
 
@@ -118,7 +125,7 @@ void update_cache_line(ENTRY *loc, char *key, char *val) {
     loc->is_valid = 'T';
     loc->is_dirty = 'T';
     loc->timestamp = get_microsecond_timestamp();
-    printf("Updated entry: %s-%s(%d) \n", loc->key,loc->val, loc->freq);
+    printf("Updated entry at loc %p: %s-%s(%d) \n", loc, loc->key,loc->val, loc->freq);
 }
 
 void remove_from_cache(ENTRY *loc) {
