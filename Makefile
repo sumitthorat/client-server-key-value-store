@@ -7,8 +7,8 @@ client:	Client
 test: Test
 	./Test
 
-Server: server.o
-	gcc server.o -o Server -lpthread 
+Server: server.o hashtable.o queue.o
+	gcc server.o hashtable.o queue.o -o Server -lpthread -lm
 
 Client: client.o
 	gcc client.o -o Client -lpthread
@@ -18,6 +18,12 @@ Test: test.o
 
 server.o: server.c RW_lock/rwlock.h Requests/req_handler.h Storage/cache.h
 	gcc -c server.c 
+
+hashtable.o: DS_Utilities/hashtable.c DS_Utilities/ds_defs.h
+	gcc -c DS_Utilities/hashtable.c
+
+queue.o: DS_Utilities/queue.c DS_Utilities/ds_defs.h
+	gcc -c DS_Utilities/queue.c
 
 client.o: client.c 
 	gcc -c client.c
