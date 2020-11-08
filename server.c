@@ -140,7 +140,8 @@ void* worker(void* arg) {
             }
 
             if (len < 0) {
-                error("Read Error");
+                perror("Read Error");
+                continue;
             }
 
             //printf("\n");
@@ -222,20 +223,33 @@ void read_config() {
         3. Maximum entries in the cache
     */
 
-    char buff[256];
-    int buff_len = 256;
-    // TODO: Handle error if required
-    if (fgets(buff, buff_len, fptr) != NULL) {
-        SERVER_PORT = atoi(buff);
+    char *line = NULL;
+    size_t len;
+    int read;
+    while ((read = getline(&line, &len, fptr)) != -1) {
+        char * token = strtok(line, "=");
+        
+        while( token != NULL ) {
+            if (strcmp(token, "SERVER_PORT")==0)
+            {
+                token = strtok(NULL, "=");
+                SERVER_PORT = atoi(token);
+            }
+            else if (strcmp(token,"NUM_WORKER_THREADS")==0)
+            {
+                token = strtok(NULL, "=");
+                NUM_WORKER_THREADS=  atoi(token);
+            }
+            else if (strcmp(token, "CACHE_LEN")==0)
+            {
+                token = strtok(NULL, "=");
+                CACHE_LEN=  atoi(token);
+            }
+            else
+            {
+                token = strtok(NULL, "=");
+            }  
+        } 
     }
-
-    if (fgets(buff, buff_len, fptr) != NULL) {
-        NUM_WORKER_THREADS = atoi(buff);
-    }
-
-    if (fgets(buff, buff_len, fptr) != NULL) {
-        CACHE_LEN = atol(buff);
-    }
-
     fclose(fptr);
 }
