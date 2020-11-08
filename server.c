@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
     // Read config file
     read_config();
     initialize_cache();
-    initialise_file_index();
+    initialise_ps();
     //TODO:Create Global Hash Table
     table = createHashTable();
     // Mutex required for inserting/deleting from Global Hash Table
@@ -43,9 +43,8 @@ int main(int argc, char** argv) {
     struct sockaddr_in serv_addr, cli_addr;
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
-        error("Error in server listening socket");
-    }
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
+        error("setsockopt(SO_REUSEADDR) failed");
 
     bzero((char *) &serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
@@ -120,11 +119,11 @@ void* worker(void* arg) {
     struct epoll_event events[8];
     
     while (1) {
-        // printf("New round\n");
+        // //printf("New round\n");
         int nfds = epoll_wait(worker_epoll_fds[id], events, 8, 10000);
 
-        char buff[9];
-        int buff_len = 9; 
+        char buff[MSG_SIZE];
+        int buff_len = MSG_SIZE; 
 
         char* resp = (char*) malloc(sizeof(char) * MSG_SIZE);
 
@@ -140,12 +139,14 @@ void* worker(void* arg) {
                 error("Read Error");
             }
 
-            printf("\n");
-            printf("WT = %d, MSG = %s\n", id, buff);
+            //printf("\n");
+            //printf("WT = %d, MSG = %s\n", id, buff);
 
             if (buff[0] == '1' || buff[0] == '3') {
-                handle_requests(buff, resp);
-            } else { 
+                handle_requests(buff, resp, id);
+            } 
+            else 
+            { 
                 char *key = substring(buff, 1, KEY_SIZE + 1); 
                 char *val = substring(buff, KEY_SIZE + 1, KEY_SIZE + VAL_SIZE + 1); 
                 pthread_mutex_lock(&mutex);
@@ -156,7 +157,7 @@ void* worker(void* arg) {
                    {
                     insertToHash(table, key);
                     pthread_mutex_unlock(&mutex);
-                    handle_requests(buff,resp);
+                    handle_requests(buff,resp,id);
                     pthread_mutex_lock(&mutex);
                     deleteFromHash(table, key);
                    } 
@@ -173,7 +174,7 @@ void* worker(void* arg) {
                 if (!searchInHash(table, key)) {
                     insertToHash(table,key);
                     pthread_mutex_unlock(&mutex);
-                    handle_requests(buff, resp);
+                    handle_requests(buff, resp, id);
                     pthread_mutex_lock(&mutex);
                     deleteFromHash(table,key);
                     pthread_mutex_unlock(&mutex);
@@ -182,7 +183,9 @@ void* worker(void* arg) {
                 else if (size(Q) != 1) {
                     pop(Q);
                     add(Q, item->req,item->clientFd);
-                }         
+                    pthread_mutex_unlock(&mutex);
+                }
+                       
             }
             printf("Resp: %s\n", resp);
             size_t write_len = write(events[i].data.fd, resp, MSG_SIZE);

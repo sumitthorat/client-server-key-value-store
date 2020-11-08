@@ -25,7 +25,7 @@ int NUM_OF_INTIAL_ENTRIES;
 
 pthread_mutex_t lock; 
 
-char *key_values[1000];
+char *key_values[20000];
 
 unsigned long get_microsecond_timestamp(){
     struct timeval tv;
@@ -147,13 +147,13 @@ void send_get_message(int t_id, int sockfd){
     char* message = key_values[ridx];
     key = substring(message, 0, 4);
    
-    printf("Sending GET request, key = %s\n", key);
+    // printf("Sending GET request, key = %s\n", key);
     int code = get(key, &val, &error, sockfd);
 
     if (code == 0) {
-        printf("Response = %s:%s (Successful GET)\n", key, val);
+        // printf("Response = %s:%s (Successful GET)\n", key, val);
     } else {
-        printf("Err w/ K= %s\n", error);
+        // printf("Err w/ K= %s\n", error);
     }
 }
 
@@ -172,13 +172,13 @@ void send_del_message(int t_id, int sockfd){
 
 
     key = substring(message, 0, 4);
-    printf("Sending DEL request, key = %s\n", key);
+    // printf("Sending DEL request, key = %s\n", key);
     int code = del(key, &error, sockfd);
 
     if (code == 0) {
-        printf("Response = %s (Successful DEL)\n", key);
+        // printf("Response = %s (Successful DEL)\n", key);
     } else {
-        printf("Err w/ K= %s\n", error);
+        // printf("Err w/ K= %s\n", error);
     }
 
 }
@@ -194,13 +194,13 @@ void send_put_message(int t_id, int sockfd){
     key = substring(message, 0, 4);
     val = substring(message, 4, 8);
 
-    printf("Sending PUT request, key = %s\n", key);
+    // printf("Sending PUT request, key = %s\n", key);
     int code = put(key, val, &error, sockfd);
 
     if (code == 0) {
-        printf("Response = %s:%s (Successful PUT)\n", key, val);
+        // printf("Response = %s:%s (Successful PUT)\n", key, val);
     } else {
-        printf("Err w/ K= %s\n", error);
+        // printf("Err w/ K= %s\n", error);
     }
 
 
@@ -224,7 +224,7 @@ void populate_kv_store(int sockfd){
 
         message[MSG_SIZE - 1] = (char)0;
         key_values[i] =  strdup(message);
-        printf("Key Val: %s\n",message);
+        // printf("Key Val: %s\n",message);
         
 
         char *key, *val, *error;
@@ -233,12 +233,12 @@ void populate_kv_store(int sockfd){
         int code = put(key, val, &error, sockfd);
 
         if (code < 0) {
-            printf("Err w/ K = %s\n", error ? "Some socket error" : error);
+            // printf("Err w/ K = %s\n", error ? "Some socket error" : error);
         }
 
         i++;
     }
-    printf("\n");
+    // printf("\n");
 }
 
 

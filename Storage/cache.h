@@ -15,7 +15,7 @@ struct entry_with_status {
 };
 
 void initialize_cache();
-struct entry_with_status *find_update_cache_line(char *key, char *val, int req);
+struct entry_with_status *find_update_cache_line(char *key, char *val, int req, int id);
 void remove_from_cache(ENTRY *loc);
 void update_cache_line(ENTRY *loc, char *key, char *val);
 void update_frequency_timestamp(ENTRY *loc);
@@ -26,9 +26,9 @@ void initialize_cache() {
         ENTRY *ptr = cache_ptr + i;
         ptr->is_valid = 'F'; 
         init_rwlock(&(ptr->rwl));
-        printf("Initialised lock at %p\n", ptr);
+        // printf("Initialised lock at %p\n", ptr);
     }
-    printf("Size of entry: %ld\n", sizeof(ENTRY));
+    // printf("Size of entry: %ld\n", sizeof(ENTRY));
 }
 
 /*
@@ -44,17 +44,18 @@ void initialize_cache() {
         Status = 2 -> an available Cache line is returned
         Status = 3 -> Cache line with LRU Key is returned
 */
-struct entry_with_status *find_update_cache_line(char *key, char *val, int req) {
-    printf("find_update_cache_line\n");
+struct entry_with_status *find_update_cache_line(char *key, char *val, int req, int id) {
+    // printf("find_update_cache_line\n");
 
     int status = 3; //by default status = 3
     unsigned long oldest_timestamp = LONG_MAX;
     ENTRY *entry = NULL;
     for (int i = 0; i < CACHE_LEN; i++) {
         ENTRY *loc = cache_ptr + i;
-        // printf("Trying for read lock at %p\n",loc);
+        int j = loc-cache_ptr;
+        // printf("Trying for write lock at %d with reader count: %d\n",j, loc->rwl.reader_count);
         write_lock(&(loc->rwl));
-        // printf("Obtained read lock for %p\n",loc);
+        // printf("Obtained write lock \n");
         if (loc->is_valid == 'T' && (strcmp(loc->key, key) == 0)) {
             // printf("(cache) Found: %s\n", loc->key);
             entry = loc;
@@ -68,6 +69,7 @@ struct entry_with_status *find_update_cache_line(char *key, char *val, int req) 
                 temp->key = loc->key;
                 temp->val = loc->val;
                 write_unlock(&(loc->rwl));
+                // printf("Unlocked write lock at %d\n", j);
                 struct entry_with_status *ret = (struct entry_with_status *)malloc(sizeof(struct entry_with_status));
                 ret->entry = temp;
                 ret->status = status;
@@ -75,6 +77,7 @@ struct entry_with_status *find_update_cache_line(char *key, char *val, int req) 
             } else if (req == 2) {
                 update_cache_line(loc, key, val);
                 write_unlock(&(loc->rwl));
+                // printf("Unlocked write lock at %d\n", j);
                 struct entry_with_status *ret = (struct entry_with_status *)malloc(sizeof(struct entry_with_status));
                 ret->entry = NULL;
                 ret->status = status;
@@ -83,27 +86,27 @@ struct entry_with_status *find_update_cache_line(char *key, char *val, int req) 
             else {
                 remove_from_cache(loc);
                 write_unlock(&(loc->rwl));
+                // printf("Unlocked write lock at %d\n", j);
                 struct entry_with_status *ret = (struct entry_with_status *)malloc(sizeof(struct entry_with_status));
                 ret->entry = NULL;
                 ret->status = status;
                 return ret;
             }
         } else if (loc->is_valid == 'F') {
-            printf("At loc %p\n",loc);
-            printf("Status update to 2\n");
+            // printf("At loc %p\n",loc);
+            // printf("Status update to 2\n");
             
             status = 2;
             entry = loc;
-        }
-        // if we have already got an available cache line, don't try for LRU  1604035667498196
-        if ((status != 2 && status != 1) && loc->is_valid == 'T' && oldest_timestamp > loc->timestamp) {
-            printf("At loc %p\n",loc);
-            printf("Updating LRU block\n");
+        } else if (status!=2 && loc->is_valid == 'T' && oldest_timestamp > loc->timestamp) {
+            // printf("At loc %p\n",loc);
+            // printf("Updating LRU block\n");
             oldest_timestamp = (long int)loc->timestamp;
             entry = loc;
         }
 
         write_unlock(&(loc->rwl));
+        // printf("Unlocked write lock at %d\n", j);
         // printf("Released read lock for %p\n",loc);
     }
     struct entry_with_status *ret = (struct entry_with_status *)malloc(sizeof(struct entry_with_status));
@@ -113,7 +116,7 @@ struct entry_with_status *find_update_cache_line(char *key, char *val, int req) 
 }
 
 void update_cache_line(ENTRY *loc, char *key, char *val) {
-    printf("update_cache_line\n");
+    // printf("update_cache_line\n");
     
     if (loc->is_valid == 'T' && strcmp(loc->key, key) == 0)
         loc->freq ++;
@@ -125,11 +128,11 @@ void update_cache_line(ENTRY *loc, char *key, char *val) {
     loc->is_valid = 'T';
     loc->is_dirty = 'T';
     loc->timestamp = get_microsecond_timestamp();
-    printf("Updated entry at loc %p: %s-%s(%d) \n", loc, loc->key,loc->val, loc->freq);
+    // printf("Updated entry at loc %p: %s-%s(%d) \n", loc, loc->key,loc->val, loc->freq);
 }
 
 void remove_from_cache(ENTRY *loc) {
-    printf("remove_from_cache, loc = %p\n", loc);
+    // printf("remove_from_cache, loc = %p\n", loc);
     loc->is_valid = 'F';
     loc->freq = 0;
 }

@@ -78,12 +78,12 @@ static void read_unlock (struct rwlock *rwl) {
 */
 static void write_lock (struct rwlock *rwl) {
     pthread_mutex_lock(&rwl->mutex);
-    while (rwl->reader_count>0 || rwl->writer)
-    {
-        pthread_cond_wait(&rwl->write_wait, &rwl->mutex);
-    }
-    rwl->writer=1;
-    pthread_mutex_unlock(&rwl->mutex);
+    // while (rwl->reader_count>0 || rwl->writer)
+    // {
+    //     pthread_cond_wait(&rwl->write_wait, &rwl->mutex);
+    // }
+    // rwl->writer=1;
+    // pthread_mutex_unlock(&rwl->mutex);
 }
 
 /*
@@ -92,9 +92,9 @@ static void write_lock (struct rwlock *rwl) {
 * It will set the writer flag to 0.
 */
 static void write_unlock (struct rwlock *rwl) {
-    pthread_mutex_lock(&rwl->mutex);
-    rwl->writer=0;
-    pthread_cond_broadcast(&rwl->read_wait);
+    // pthread_mutex_lock(&rwl->mutex);
+    // rwl->writer=0;
+    // pthread_cond_broadcast(&rwl->read_wait);
     pthread_mutex_unlock(&rwl->mutex);
 }
 
