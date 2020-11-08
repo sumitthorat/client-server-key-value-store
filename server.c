@@ -121,7 +121,11 @@ void* worker(void* arg) {
     while (1) {
         // //printf("New round\n");
         int nfds = epoll_wait(worker_epoll_fds[id], events, 8, 10000);
-
+        if (nfds==0)
+        {
+            printf("WT: %d epoll time out\n", id);
+        }
+        
         char buff[MSG_SIZE];
         int buff_len = MSG_SIZE; 
 
@@ -141,7 +145,7 @@ void* worker(void* arg) {
 
             //printf("\n");
             //printf("WT = %d, MSG = %s\n", id, buff);
-
+            printf("Message: %s\n", buff);
             if (buff[0] == '1' || buff[0] == '3') {
                 handle_requests(buff, resp, id);
             } 
@@ -153,23 +157,32 @@ void* worker(void* arg) {
 
                 // if any other thread is handling PUT request with same key, then don't handle that now
                 // Add that PUT request to a queue. Handle that later
+                
                 if (!searchInHash(table, key)) //check global hash table
                    {
                     insertToHash(table, key);
+                    printf("After inserting in hash: %d\n", searchInHash(table,key)?1:0);
                     pthread_mutex_unlock(&mutex);
                     handle_requests(buff,resp,id);
                     pthread_mutex_lock(&mutex);
                     deleteFromHash(table, key);
+                    printf("After deleting from hash table: %d\n", searchInHash(table,key)?1:0);
+
                    } 
                 else {
+                    
                     add(Q, buff, events[i].data.fd);
                 }
                 pthread_mutex_unlock(&mutex);
             }
+            // printf("WT: %d Before Q\n", id);
+            
             while(!isEmpty(Q)) {
+                printf("WT: %d Queue size: %d for message: %s\n",id,  Q->size, buff);
                 char *key;
                 struct QueueNode *item = top(Q);
                 pthread_mutex_lock(&mutex);
+                
                 key = substring(item->req, 1, KEY_SIZE + 1);
                 if (!searchInHash(table, key)) {
                     insertToHash(table,key);
@@ -185,9 +198,9 @@ void* worker(void* arg) {
                     add(Q, item->req,item->clientFd);
                     pthread_mutex_unlock(&mutex);
                 }
-                       
             }
-            printf("Resp: %s\n", resp);
+            // printf("WT: %d After Q\n",id);
+            // printf("Resp: %s\n", resp);
             size_t write_len = write(events[i].data.fd, resp, MSG_SIZE);
             // handle_requests(buff); // Here request will be parsed and appropriate action will be taken
         }

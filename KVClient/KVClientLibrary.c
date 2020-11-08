@@ -1,21 +1,60 @@
 #include "KVClientLibrary.h"
 
+double total_get_time=0;
+double total_put_time=0;
+pthread_mutex_t get_time_lock, put_time_lock;
+
+struct time_stats *ts;
+
+void initialise_timer(){
+    ts = (struct time_stats *)malloc(sizeof(struct time_stats));
+}
+
+double get_total_get_time(){
+    return ts->total_get_time;
+}
+
+double get_total_put_time(){
+    return ts->total_put_time;
+}
 
 int get(char* key, char** val, char** error, int serverfd) {
     // Form the request
+    struct timespec start, end;
+    struct timeval tv;
+    tv.tv_sec = 5;
+    tv.tv_usec = 0;
+    setsockopt(serverfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
     char req[RSIZE];
     req[0] = '1';
     strncpy(req + KEY_START_IDX, key, KV_LEN);
     bzero(req + VAL_START_IDX, KV_LEN);
     
     // Send request
+    clock_gettime(CLOCK_REALTIME, &start);
     int writen = write(serverfd, req, RSIZE);
 
     // Wait for response
     char* resp = (char*) malloc(sizeof(char) * RSIZE);
     int readn = read(serverfd, resp, RSIZE);
-    
 
+    clock_gettime(CLOCK_REALTIME, &end);
+    double time_spent;
+    if ((end.tv_nsec-start.tv_nsec)<0)
+    {
+        struct timespec temp;
+        temp.tv_sec = end.tv_sec-start.tv_sec-1;
+        temp.tv_nsec = BILLION+end.tv_nsec-start.tv_nsec;
+        time_spent = temp.tv_sec + temp.tv_nsec / BILLION;
+    }
+    else
+    {
+        time_spent = ((end.tv_sec - start.tv_sec) +(end.tv_nsec - start.tv_nsec)) / BILLION;
+    }
+    // pthread_mutex_lock(&get_time_lock);
+    ts->total_get_time+=time_spent;
+    // pthread_mutex_unlock(&get_time_lock);
+    // printf("Response time for GET is %f micro-seconds\n", time_spent*pow(10,6));
     // Malloc val/error memory
     if (readn <= 0 || resp[0] == ERROR) {
         *error = (char*) malloc(sizeof(char) * KV_LEN);
@@ -33,18 +72,42 @@ int get(char* key, char** val, char** error, int serverfd) {
 int put(char* key, char* val, char** error, int serverfd) {
     char req[RSIZE];
     req[0] = '2';
+    
+    struct timespec start, end;
+    // struct timeval tv;
+    // tv.tv_sec = 5;
+    // tv.tv_usec = 0;
+    // setsockopt(serverfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
     strncpy(req + KEY_START_IDX, key, KV_LEN);
     strncpy(req + VAL_START_IDX, val, KV_LEN);
 
     // Send request
+    clock_gettime(CLOCK_REALTIME, &start);
     size_t writen = write(serverfd, req, RSIZE);
 
     // Wait for response
     char* resp = (char*) malloc(sizeof(char) * RSIZE);
     size_t readn = read(serverfd, resp, RSIZE);
+    clock_gettime(CLOCK_REALTIME, &end);
+    double time_spent;
+    if ((end.tv_nsec-start.tv_nsec)<0)
+    {
+        struct timespec temp;
+        temp.tv_sec = end.tv_sec-start.tv_sec-1;
+        temp.tv_nsec = BILLION+end.tv_nsec-start.tv_nsec;
+        time_spent = temp.tv_sec + temp.tv_nsec / BILLION;
+    }
+    else
+    {
+        time_spent = ((end.tv_sec - start.tv_sec) +(end.tv_nsec - start.tv_nsec)) / BILLION;
+    }
     
-
+    // pthread_mutex_lock(&put_time_lock);
+    ts->total_put_time+=time_spent;
+    // pthread_mutex_unlock(&put_time_lock);
+	// printf("Response time for PUT is %f micro-seconds \n", time_spent*pow(10,6));
+    
     // Malloc error memory
     if (readn <= 0) {
         return -1;

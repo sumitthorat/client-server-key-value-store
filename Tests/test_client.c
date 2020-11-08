@@ -25,7 +25,7 @@ int NUM_OF_INTIAL_ENTRIES;
 
 pthread_mutex_t lock; 
 
-char *key_values[20000];
+char *key_values[100];
 
 unsigned long get_microsecond_timestamp(){
     struct timeval tv;
@@ -139,9 +139,9 @@ void close_connection(int sockfd){
 }
 
 void send_get_message(int t_id, int sockfd){
-    pthread_mutex_lock(&lock);
+    // pthread_mutex_lock(&lock);
     int ridx = random() % NUM_OF_INTIAL_ENTRIES;
-    pthread_mutex_unlock(&lock);
+    // pthread_mutex_unlock(&lock);
 
     char *key, *val, *error;
     char* message = key_values[ridx];
@@ -162,11 +162,11 @@ void send_get_message(int t_id, int sockfd){
 void send_del_message(int t_id, int sockfd){
 
     char *key, *val, *error;
-    pthread_mutex_lock(&lock);
+    // pthread_mutex_lock(&lock);
     int ridx = random() % NUM_OF_INTIAL_ENTRIES;
     key_values[ridx] = key_values[NUM_OF_INTIAL_ENTRIES - 1];
     NUM_OF_INTIAL_ENTRIES--;
-    pthread_mutex_unlock(&lock);
+    // pthread_mutex_unlock(&lock);
 
     char* message = key_values[ridx];
 
@@ -184,9 +184,9 @@ void send_del_message(int t_id, int sockfd){
 }
 
 void send_put_message(int t_id, int sockfd){
-    pthread_mutex_lock(&lock);
+    // pthread_mutex_lock(&lock);
     int ridx = random() % NUM_OF_INTIAL_ENTRIES;
-    pthread_mutex_unlock(&lock);
+    // pthread_mutex_unlock(&lock);
 
     char *key, *val, *error;
     char* message = key_values[ridx];
@@ -224,14 +224,14 @@ void populate_kv_store(int sockfd){
 
         message[MSG_SIZE - 1] = (char)0;
         key_values[i] =  strdup(message);
-        // printf("Key Val: %s\n",message);
+        printf("Key Val: %s\n",message);
         
 
         char *key, *val, *error;
         key = substring(message, 0, 4);
         val = substring(message, 4, 8);
         int code = put(key, val, &error, sockfd);
-
+        printf("Value: %s Code: %d\n",val, code);
         if (code < 0) {
             // printf("Err w/ K = %s\n", error ? "Some socket error" : error);
         }
@@ -250,7 +250,7 @@ void *thread_fun(void *args){
     int get=NUM_OF_GET;
     int put=NUM_OF_PUT;
     int del=NUM_OF_DEL;
-    printf("Thread-%d initialised...\n", t_id);
+    // printf("Thread-%d initialised...\n", t_id);
     //Creating a seed (Right now not calling delete)
     while (get||put||del)
     {
@@ -308,12 +308,13 @@ void *thread_fun(void *args){
 int main(){
     int socket;
     read_config();
+    initialise_timer();
     socket = connect_to_server();
 
     populate_kv_store(socket);
     close_connection(socket);
-
-    sleep(1);
+    // exit(0);
+    sleep(4);
 
     //Create clients here
     if (pthread_mutex_init(&lock, NULL) != 0) { 
@@ -335,6 +336,19 @@ int main(){
     {
         pthread_join(thread_id[j],NULL);
     }
+    double total_put_time = get_total_put_time();
+    double total_get_time = get_total_get_time();
+    double total_get_time_per_client = total_get_time/NUM_OF_CLIENTS;
+    double total_put_time_per_client = total_put_time/NUM_OF_CLIENTS;
+    double average_put_response_time = total_put_time/(NUM_OF_CLIENTS*NUM_OF_PUT);
+    double average_get_response_time = total_put_time/(NUM_OF_CLIENTS*NUM_OF_PUT);
+    // double average_put_response_time_per_client = 
+    printf("Total PUT time is: %f\n", total_put_time);
+    printf("Total GET time is: %f\n", total_get_time);
+    printf("Total GET time per client is: %f\n", total_get_time_per_client);
+    printf("Total PUT time per client is: %f\n", total_put_time_per_client);
+    printf("Average GET response time per client is: %f\n", average_get_response_time);
+    printf("Average PUT response time per client is: %f\n", average_put_response_time);
     printf("\n");
         
 
