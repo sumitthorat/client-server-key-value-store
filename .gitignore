@@ -9,4 +9,8 @@ demo*
 PS.txt
 test
 .vscode
-Persistant_Store/data*
+Persistent_Store/data*
+Server
+test_client
+server_config.txt
+Tests/client_config.txt

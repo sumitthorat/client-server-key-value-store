@@ -172,7 +172,7 @@ struct file_index *file_index[NUM_OF_FILES];
 char *get_file_name(char *filename, int number)
 {
     filename[0] =(char)0;
-    char file[30] ="Persistant_Store/data";
+    char file[30] ="Persistent_Store/data";
     char num[3];
     sprintf(num, "%d", number);
     strcat(file, num);
