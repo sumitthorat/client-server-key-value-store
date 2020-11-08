@@ -224,14 +224,14 @@ void populate_kv_store(int sockfd){
 
         message[MSG_SIZE - 1] = (char)0;
         key_values[i] =  strdup(message);
-        printf("Key Val: %s\n",message);
+        // printf("Key Val: %s\n",message);
         
 
         char *key, *val, *error;
         key = substring(message, 0, 4);
         val = substring(message, 4, 8);
         int code = put(key, val, &error, sockfd);
-        printf("Value: %s Code: %d\n",val, code);
+        // printf("Value: %s Code: %d\n",val, code);
         if (code < 0) {
             // printf("Err w/ K = %s\n", error ? "Some socket error" : error);
         }
@@ -314,7 +314,7 @@ int main(){
     populate_kv_store(socket);
     close_connection(socket);
     // exit(0);
-    sleep(4);
+    // sleep(4);
 
     //Create clients here
     if (pthread_mutex_init(&lock, NULL) != 0) { 

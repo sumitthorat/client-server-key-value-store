@@ -24,7 +24,7 @@ int get(char* key, char** val, char** error, int serverfd) {
     struct timeval tv;
     tv.tv_sec = 5;
     tv.tv_usec = 0;
-    setsockopt(serverfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+    // setsockopt(serverfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
     char req[RSIZE];
     req[0] = '1';
     strncpy(req + KEY_START_IDX, key, KV_LEN);

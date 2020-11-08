@@ -146,7 +146,7 @@ void* worker(void* arg) {
 
             //printf("\n");
             //printf("WT = %d, MSG = %s\n", id, buff);
-            printf("Message: %s\n", buff);
+            // printf("Message: %s\n", buff);
             if (buff[0] == '1' || buff[0] == '3') {
                 handle_requests(buff, resp, id);
             } 
@@ -154,51 +154,66 @@ void* worker(void* arg) {
             { 
                 char *key = substring(buff, 1, KEY_SIZE + 1); 
                 char *val = substring(buff, KEY_SIZE + 1, KEY_SIZE + VAL_SIZE + 1); 
+                // printf("WT = %d: Trying to acquire mutex\n", id);
                 pthread_mutex_lock(&mutex);
-
+                // printf("WT = %d: acquired mutex\n", id);
                 // if any other thread is handling PUT request with same key, then don't handle that now
                 // Add that PUT request to a queue. Handle that later
                 
                 if (!searchInHash(table, key)) //check global hash table
                    {
                     insertToHash(table, key);
-                    printf("After inserting in hash: %d\n", searchInHash(table,key)?1:0);
+                    // printf("WT = %d: After inserting %s in hash: %d\n", id, key, searchInHash(table,key)?1:0);
                     pthread_mutex_unlock(&mutex);
+                    // printf("WT = %d: Released mutex\n", id);
+                    // printf("WT = %d: Called handle_requests\n", id);
                     handle_requests(buff,resp,id);
+                    // printf("WT = %d: completed handle_requests\n", id);
+                    // printf("WT = %d: Trying to acquire mutex\n", id);
                     pthread_mutex_lock(&mutex);
+                    // printf("WT = %d: acquired mutex\n", id);
                     deleteFromHash(table, key);
-                    printf("After deleting from hash table: %d\n", searchInHash(table,key)?1:0);
+                    // printf("WT = %d: After deleting %s from hash table: %d\n", id, key, searchInHash(table,key)?1:0);
 
                    } 
                 else {
-                    
+                    // printf("WT = %d: Adding to Queue %s\n", id, buff);
                     add(Q, buff, events[i].data.fd);
                 }
                 pthread_mutex_unlock(&mutex);
+                // printf("WT = %d: Released mutex\n", id);
             }
             // printf("WT: %d Before Q\n", id);
             
             while(!isEmpty(Q)) {
-                printf("WT: %d Queue size: %d for message: %s\n",id,  Q->size, buff);
+                // printf("WT: %d Queue size: %d for message: %s\n",id,  Q->size, buff);
                 char *key;
                 struct QueueNode *item = top(Q);
+                // printf("WT = %d: Trying to acquire mutex from queue\n", id);
                 pthread_mutex_lock(&mutex);
-                
+                // printf("WT = %d: acquired mutex\n", id);
                 key = substring(item->req, 1, KEY_SIZE + 1);
                 if (!searchInHash(table, key)) {
                     insertToHash(table,key);
                     pthread_mutex_unlock(&mutex);
+                    // printf("WT = %d: Released mutex\n", id);
+                    // printf("WT: %d Starting processing request %s from Queue\n",id, buff);
                     handle_requests(buff, resp, id);
+                    // printf("WT: %d Processed request %s from Queue\n",id, buff);
                     pthread_mutex_lock(&mutex);
+                    // printf("WT = %d: acquired mutex\n", id);
                     deleteFromHash(table,key);
                     pthread_mutex_unlock(&mutex);
+                    // printf("WT = %d: Released mutex\n", id);
                     pop(Q);
                 }
                 else if (size(Q) != 1) {
                     pop(Q);
                     add(Q, item->req,item->clientFd);
                     pthread_mutex_unlock(&mutex);
-                }
+                    // printf("WT = %d: Released mutex\n", id);
+                } else if (size(Q) == 1)
+                    pthread_mutex_unlock(&mutex);
             }
             // printf("WT: %d After Q\n",id);
             // printf("Resp: %s\n", resp);
