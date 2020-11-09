@@ -183,9 +183,9 @@ int is_equal(char* a, char* b) {
 }
 
 void send_get_message(int t_id, int sockfd){
-    // pthread_mutex_lock(&lock);
+    pthread_mutex_lock(&lock);
     int ridx = random() % NUM_OF_INTIAL_ENTRIES;
-    // pthread_mutex_unlock(&lock);
+    
 
     char *key, *val, *error;
     char* message = key_values[ridx];
@@ -237,9 +237,9 @@ void send_del_message(int t_id, int sockfd){
 
 void send_put_message(int t_id, int sockfd){
     
-    // pthread_mutex_lock(&lock);
+    pthread_mutex_lock(&lock);
     int ridx = random() % NUM_OF_INTIAL_ENTRIES;
-    // pthread_mutex_unlock(&lock);
+    
 
     char *key, *val, *error;
     char* message = key_values[ridx];
@@ -260,7 +260,7 @@ void send_put_message(int t_id, int sockfd){
 
     // printf("Sending PUT request, key = %s\n", key);
     int code = put(key, val, &error, sockfd);
-
+    pthread_mutex_unlock(&lock);
     if (code == 0) {
         // printf("Response = %s:%s (Successful PUT)\n", key, val);
         // if (!is_equal(val, )) {

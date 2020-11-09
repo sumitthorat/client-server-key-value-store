@@ -1,4 +1,5 @@
 server:	Server
+	@mkdir -p Persistent_Store  
 	./Server
 
 client:	Client
