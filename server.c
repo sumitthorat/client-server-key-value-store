@@ -35,7 +35,6 @@ int main(int argc, char** argv) {
     read_config();
     initialize_cache();
     initialise_ps();
-    //TODO:Create Global Hash Table
     table = createHashTable();
     // Mutex required for inserting/deleting from Global Hash Table
     pthread_mutex_init(&mutex, NULL);
@@ -56,7 +55,8 @@ int main(int argc, char** argv) {
     }
 
     listen(sockfd, 5);
-
+    printf("Started listening...\n");
+    printf("Setting up %d threads\n", NUM_WORKER_THREADS);
     /*
         Setup the data structures for each worker thread i.e. epoll instance specific to each thread
         epoll_create for n threads, add to array
@@ -73,6 +73,7 @@ int main(int argc, char** argv) {
 
         // Create and spawn worker thread
 		t_ids[i] = i;
+        // printf("Creating thread-id: %d\n", i);
 		pthread_create(&ids[i], NULL, worker, (void*) &t_ids[i]);
 	
     }
@@ -108,7 +109,6 @@ int main(int argc, char** argv) {
 
 void* worker(void* arg) {
     int id = *((int*)arg);
-    //TODO: create queue
     struct Queue *Q = createQueue();
     printf("Thread %d is ready\n", id);
 
@@ -121,10 +121,10 @@ void* worker(void* arg) {
     while (1) {
         // //printf("New round\n");
         int nfds = epoll_wait(worker_epoll_fds[id], events, 8, 10000);
-        if (nfds==0)
-        {
-            printf("WT: %d epoll time out\n", id);
-        }
+        // if (nfds==0)
+        // {
+        //     printf("WT: %d epoll time out\n", id);
+        // }
         
         char buff[MSG_SIZE];
         int buff_len = MSG_SIZE; 
@@ -216,7 +216,8 @@ void* worker(void* arg) {
                     pthread_mutex_unlock(&mutex);
             }
             // printf("WT: %d After Q\n",id);
-            // printf("Resp: %s\n", resp);
+            unsigned int status_code = *resp;
+            printf("Resp: %s with status code: %d\n", resp, status_code);
             size_t write_len = write(events[i].data.fd, resp, MSG_SIZE);
             // handle_requests(buff); // Here request will be parsed and appropriate action will be taken
         }
