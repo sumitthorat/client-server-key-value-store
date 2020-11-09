@@ -74,6 +74,23 @@ void get(char *msg, char* resp, int id) {
             SET_MSG(resp, ERROR_CODE, key, "Erro"); 
         }
         else {
+
+            // Get the key-val in cache
+            write_lock(&(loc->rwl));
+            char *backup_key, *backup_val;
+            int flag = 0;
+            if (loc->is_valid == 'T' && loc->is_dirty == 'T') {
+                backup_key = loc->key;
+                backup_val = loc->val;
+                flag = 1;
+            }
+
+            // Since we will do lazy update, currenly we don't care whether it is present in PS or not
+            update_cache_line(loc, key, val); 
+            if (flag) {
+                update_PS(backup_key, backup_val); 
+            }
+            write_unlock(&(loc->rwl));
             //printf("Got value =\"%s\"\n", val);
             SET_MSG(resp, SUCCESS_CODE, key, val);  
             // return val; //TODO: add ENTRY to the cache

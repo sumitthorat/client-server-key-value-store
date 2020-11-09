@@ -203,8 +203,9 @@ void initialise_ps()
     }
 }
 
-int get_file_hash_index(unsigned char *str)
+int get_file_hash_index(char *st)
 {
+    unsigned char *str = (unsigned char *)st;
     unsigned long hash = 5381;
     int c;
     while (c = *str++)
