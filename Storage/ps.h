@@ -16,7 +16,7 @@ struct file_entry{
 };
 
 struct indexer_node {
-    char *digest;
+    unsigned long long digest;
     unsigned int file_entry_no;
     struct indexer_node *next;
 };
@@ -59,9 +59,15 @@ void initialise_ps()
 }
 
 // TODO: find a better hashing algo
-char * get_digest(char *key) {
-    char *digest = (char *)malloc(4);
-    return digest;
+unsigned long long get_digest(const char *str) {       
+    const unsigned long long mulp = 2654435789;
+    unsigned long long mix = 0;
+    mix ^= 104395301;
+
+    while(*str)
+        mix += (*str++ * mulp) ^ (mix >> 23);
+
+    return mix ^ (mix << 37);
 }
 
 // TODO: find a better hashing algo
@@ -91,7 +97,7 @@ void update_PS(char *key, char *val){
     int file_no = get_file_hash_index(key);
     get_file_name(filename, file_no);
     int indexer_index = get_indexer_index(key);
-    char *digest = get_digest(key);
+    unsigned long long digest = get_digest(key);
 
     int present = 0;
     FILE *fp = fopen(filename, "r+"); 
@@ -103,7 +109,7 @@ void update_PS(char *key, char *val){
     char buff[ENTRY_SIZE];
     char *file_val;
     while (head) {
-        if (strcmp(head->digest, digest) == 0) {
+        if (head->digest == digest) {
             // we only store entry no. So multiply with 513 to get the exact location
             fseek(fp, head->file_entry_no * ENTRY_SIZE , SEEK_SET); 
             fread(buff, sizeof(buff), 1, fp);
@@ -131,7 +137,7 @@ void update_PS(char *key, char *val){
         struct indexer_node *node =  (struct indexer_node *)malloc(sizeof(struct indexer_node));
         fseek(fp, 0, SEEK_END);
         node->file_entry_no = ftell(fp) / ENTRY_SIZE;
-        node->digest = strdup(digest);
+        node->digest = digest;
         sprintf(buff, "%c%s%s", 'I', key, val);
         fwrite(buff, sizeof(buff), 1, fp);
         indexer_array[indexer_index].cnt++;
@@ -154,7 +160,7 @@ char *find_in_PS(char *key){
     int file_no = get_file_hash_index(key);
     get_file_name(filename, file_no);
     int indexer_index = get_indexer_index(key);
-    char *digest = get_digest(key);
+    unsigned long long digest = get_digest(key);
 
     int present = 0;
     FILE *fp = fopen (filename, "r+"); 
@@ -164,7 +170,7 @@ char *find_in_PS(char *key){
     char buff[ENTRY_SIZE];
     char *file_val;
     while (head) {
-        if (strcmp(head->digest, digest) == 0) {
+        if (head->digest == digest) {
             // we only store entry no. So multiply with 513 to get the exact location
             fseek(fp, head->file_entry_no * ENTRY_SIZE , SEEK_SET); 
             fread(buff, sizeof(buff), 1, fp);
@@ -200,7 +206,7 @@ int remove_from_PS(char *key){
     int file_no = get_file_hash_index(key);
     get_file_name(filename, file_no);
     int indexer_index = get_indexer_index(key);
-    char *digest = get_digest(key);
+    unsigned long long digest = get_digest(key);
 
     int present = 0;
     FILE *fp = fopen (filename, "r+"); 
@@ -211,7 +217,7 @@ int remove_from_PS(char *key){
     char buff[KEY_SIZE + 1];
     char *file_val;
     while (head) {
-        if (strcmp(head->digest, digest) == 0) {
+        if (head->digest == digest) {
             // we only store entry no. So multiply with 513 to get the exact location
             fseek(fp, head->file_entry_no * ENTRY_SIZE , SEEK_SET); 
             fread(buff, sizeof(buff), 1, fp);
