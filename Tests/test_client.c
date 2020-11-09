@@ -25,7 +25,7 @@ int NUM_OF_INTIAL_ENTRIES;
 
 pthread_mutex_t lock; 
 
-char *key_values[100];
+char *key_values[10000];
 
 unsigned long get_microsecond_timestamp(){
     struct timeval tv;
@@ -45,6 +45,40 @@ char *substring(char *str, int start, int end) {
 
     return substr;
 }
+
+
+void generate_report(){
+    double total_put_time = get_total_put_time();
+    double total_get_time = get_total_get_time();
+    double total_get_time_per_client = total_get_time/NUM_OF_CLIENTS;
+    double total_put_time_per_client = total_put_time/NUM_OF_CLIENTS;
+    double average_put_response_time = total_put_time/(NUM_OF_CLIENTS*NUM_OF_PUT);
+    double average_get_response_time = total_put_time/(NUM_OF_CLIENTS*NUM_OF_PUT);
+    printf("\n");
+    printf("Server parameters: \n");
+    printf("==================\n");
+    printf("Worker threads: 4");
+    printf("Cache lines: 128");
+    printf("\n");
+    printf("Client parameters: \n");
+    printf("==================\n");
+    printf("Clients: %d\n", NUM_OF_CLIENTS);
+    printf("GETs/client: %d\n", NUM_OF_GET);
+    printf("PUTs/client: %d\n", NUM_OF_PUT);
+
+    printf("PUT Metrics\n");
+    printf("===========\n");
+    printf("Total PUT time is: %f secs\n", total_put_time);
+    printf("Total PUT time per client is: %f\n", total_put_time_per_client);
+    printf("Average PUT response time per client is: %f\n", average_put_response_time);
+    printf("\n");
+    printf("GET metrics\n");
+    printf("===========\n");
+    printf("Total GET time is: %f\n", total_get_time);
+    printf("Total GET time per client is: %f\n", total_get_time_per_client);
+    printf("Average GET response time per client is: %f\n", average_get_response_time);
+}
+
 
 void read_config(){
     FILE* fptr = fopen("Tests/client_config.txt", "r");
@@ -336,19 +370,7 @@ int main(){
     {
         pthread_join(thread_id[j],NULL);
     }
-    double total_put_time = get_total_put_time();
-    double total_get_time = get_total_get_time();
-    double total_get_time_per_client = total_get_time/NUM_OF_CLIENTS;
-    double total_put_time_per_client = total_put_time/NUM_OF_CLIENTS;
-    double average_put_response_time = total_put_time/(NUM_OF_CLIENTS*NUM_OF_PUT);
-    double average_get_response_time = total_put_time/(NUM_OF_CLIENTS*NUM_OF_PUT);
-    // double average_put_response_time_per_client = 
-    printf("Total PUT time is: %f\n", total_put_time);
-    printf("Total GET time is: %f\n", total_get_time);
-    printf("Total GET time per client is: %f\n", total_get_time_per_client);
-    printf("Total PUT time per client is: %f\n", total_put_time_per_client);
-    printf("Average GET response time per client is: %f\n", average_get_response_time);
-    printf("Average PUT response time per client is: %f\n", average_put_response_time);
+    generate_report();
     printf("\n");
         
 
