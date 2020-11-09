@@ -57,15 +57,15 @@ void generate_report(){
     printf("\n");
     printf("Server parameters: \n");
     printf("==================\n");
-    printf("Worker threads: 4");
-    printf("Cache lines: 128");
+    printf("Worker threads: 4\n");
+    printf("Cache lines: 128\n");
     printf("\n");
     printf("Client parameters: \n");
     printf("==================\n");
     printf("Clients: %d\n", NUM_OF_CLIENTS);
     printf("GETs/client: %d\n", NUM_OF_GET);
     printf("PUTs/client: %d\n", NUM_OF_PUT);
-
+    printf("\n");
     printf("PUT Metrics\n");
     printf("===========\n");
     printf("Total PUT time is: %f secs\n", total_put_time);

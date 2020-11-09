@@ -86,6 +86,7 @@ int main(int argc, char** argv) {
 
     // Conitnuously accept new connectionsd
     int wt = 0;
+    int new_conn_count=0;
     struct epoll_event ev;
     while (1) {
         // Accept incoming connection
