@@ -12,13 +12,13 @@
 #include "DS_Utilities/ds_defs.h"
 #include "Requests/req_handler.h"
 
-
+int resp_count=0, recv_count =0, in_queue=0, proc_from_queue=0;
 int SERVER_PORT;
 int NUM_WORKER_THREADS;
 int* worker_epoll_fds;
 int sockfd;
 struct hash *table = NULL;
-pthread_mutex_t mutex;
+pthread_mutex_t mutex, resp_lock, recv_lock, in_queue_lock, proc_from_queue_lock;
 
 void read_config();
 void* worker(void*);
@@ -39,7 +39,11 @@ int main(int argc, char** argv) {
     table = createHashTable();
     // Mutex required for inserting/deleting from Global Hash Table
     pthread_mutex_init(&mutex, NULL);
-    
+    pthread_mutex_init(&resp_lock, NULL);
+    pthread_mutex_init(&recv_lock, NULL);
+    pthread_mutex_init(&in_queue_lock, NULL);
+    pthread_mutex_init(&proc_from_queue_lock, NULL);
+
     struct sockaddr_in serv_addr, cli_addr;
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -148,13 +152,20 @@ void* worker(void* arg) {
                 continue;
             }
 
+            // pthread_mutex_lock(&recv_lock);
+            // ++recv_count;
+            // pthread_mutex_unlock(&recv_lock);
+
             //printf("\n");
             //printf("WT = %d, MSG = %s\n", id, buff);
             // printf("Message: %s\n", buff);
             if (buff[0] == '1' || buff[0] == '3') {
                 handle_requests(buff, resp, id);
                 size_t write_len = write(events[i].data.fd, resp, MSG_SIZE);
-                printf("Resp: %s\n", resp);
+                // pthread_mutex_lock(&resp_lock);
+                // printf("WT: %d Responded:%d  received: %d\n",id, ++resp_count, recv_count);
+                // pthread_mutex_unlock(&resp_lock);
+                // printf("Resp: %s\n", resp);
             } 
             else 
             { 
@@ -175,7 +186,10 @@ void* worker(void* arg) {
                     // printf("WT = %d: Called handle_requests\n", id);
                     handle_requests(buff,resp,id);
                     size_t write_len = write(events[i].data.fd, resp, MSG_SIZE);
-                    printf("Resp: %s\n", resp);
+                    // pthread_mutex_lock(&resp_lock);
+                    // printf("WT: %d Responded:%d  received: %d\n",id, ++resp_count, recv_count);
+                    // pthread_mutex_unlock(&resp_lock);
+                    // printf("Resp: %s\n", resp);
                     // printf("WT = %d: completed handle_requests\n", id);
                     // printf("WT = %d: Trying to acquire mutex\n", id);
                     pthread_mutex_lock(&mutex);
@@ -187,6 +201,9 @@ void* worker(void* arg) {
                 else {
                     // printf("WT = %d: Adding to Queue %s\n", id, buff);
                     add(Q, buff, events[i].data.fd);
+                    // pthread_mutex_lock(&in_queue_lock);
+                    // ++in_queue;
+                    // pthread_mutex_unlock(&in_queue_lock);
                 }
                 pthread_mutex_unlock(&mutex);
                 // printf("WT = %d: Released mutex\n", id);
@@ -224,7 +241,13 @@ void* worker(void* arg) {
                 handle_requests(buff, resp, id);
                 // printf("WT: %d Processed request %s from Queue\n",id, buff);
                 size_t write_len = write(item->clientFd, resp, MSG_SIZE);
-                printf("Resp: %s\n", resp);
+                // pthread_mutex_lock(&proc_from_queue_lock);
+                // ++proc_from_queue;
+                // pthread_mutex_unlock(&proc_from_queue_lock);
+                // pthread_mutex_lock(&resp_lock);
+                // printf("WT: %d Responded:%d  received: %d\n",id, ++resp_count, recv_count);
+                // pthread_mutex_unlock(&resp_lock);
+                // printf("Resp: %s\n", resp);
                 // printf("WT = %d: After write, len = %lu\n", id, write_len);
                 pthread_mutex_lock(&mutex);
                 // printf("WT = %d: acquired mutex\n", id);
