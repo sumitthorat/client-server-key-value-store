@@ -74,6 +74,23 @@ void get(char *msg, char* resp, int id) {
             SET_MSG(resp, ERROR_CODE, key, "Erro"); 
         }
         else {
+
+            // Get the key-val in cache
+            write_lock(&(loc->rwl));
+            char *backup_key, *backup_val;
+            int flag = 0;
+            if (loc->is_valid == 'T' && loc->is_dirty == 'T') {
+                backup_key = loc->key;
+                backup_val = loc->val;
+                flag = 1;
+            }
+
+            // Since we will do lazy update, currenly we don't care whether it is present in PS or not
+            update_cache_line(loc, key, val); 
+            if (flag) {
+                update_PS(backup_key, backup_val); 
+            }
+            write_unlock(&(loc->rwl));
             //printf("Got value =\"%s\"\n", val);
             SET_MSG(resp, SUCCESS_CODE, key, val);  
             // return val; //TODO: add ENTRY to the cache
@@ -108,31 +125,31 @@ void put(char *msg, char* resp, int id) {
     write_lock(&(loc->rwl));
     //printf("Obtained write lock \n");
     // key is present in the cache
-    // if (status == 2 || status == 3) {
-    //     if (loc->is_valid == 'T' && loc->is_dirty == 'T') {
-    //         backup_key = loc->key;
-    //         backup_val = loc->val;
-    //         flag = 1;
-    //     }
+    if (status == 2 || status == 3) {
+        if (loc->is_valid == 'T' && loc->is_dirty == 'T') {
+            backup_key = loc->key;
+            backup_val = loc->val;
+            flag = 1;
+        }
 
-    //     // Since we will do lazy update, currenly we don't care whether it is present in PS or not
-    //     update_cache_line(loc, key, val); 
-    // }
+        // Since we will do lazy update, currenly we don't care whether it is present in PS or not
+        update_cache_line(loc, key, val); 
+    }
     
-    // if (flag) {
-    //     update_PS(backup_key, backup_val); 
+    if (flag) {
+        update_PS(backup_key, backup_val); 
+    }
+    // if (status==1 || status == 2)
+    // {
+    //     update_cache_line(loc, key, val);
     // }
-    if (status==1 || status == 2)
-    {
-        update_cache_line(loc, key, val);
-    }
-    else if(status == 3)
-    {
-        backup_key = loc->key;
-        backup_val = loc->val;
-        update_cache_line(loc, key, val);
-        update_PS(backup_key, backup_val);
-    }
+    // else if(status == 3)
+    // {
+    //     backup_key = loc->key;
+    //     backup_val = loc->val;
+    //     update_cache_line(loc, key, val);
+    //     update_PS(backup_key, backup_val);
+    // }
     
     
     write_unlock(&(loc->rwl)); //TODO: can we move this before update_PS ?

@@ -25,7 +25,7 @@ int NUM_OF_INTIAL_ENTRIES;
 
 pthread_mutex_t lock; 
 
-char *key_values[100];
+char *key_values[1000];
 
 unsigned long get_microsecond_timestamp(){
     struct timeval tv;
