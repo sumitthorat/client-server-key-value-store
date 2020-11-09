@@ -69,14 +69,14 @@ void generate_report(){
     printf("PUT Metrics\n");
     printf("===========\n");
     printf("Total PUT time is: %f secs\n", total_put_time);
-    printf("Total PUT time per client is: %f\n", total_put_time_per_client);
-    printf("Average PUT response time per client is: %f\n", average_put_response_time);
+    printf("Total PUT time per client is: %f milli-secs\n", total_put_time_per_client*pow(10,3));
+    printf("Average PUT response time per client is: %f micro-secs\n", average_put_response_time*pow(10,6));
     printf("\n");
     printf("GET metrics\n");
     printf("===========\n");
-    printf("Total GET time is: %f\n", total_get_time);
-    printf("Total GET time per client is: %f\n", total_get_time_per_client);
-    printf("Average GET response time per client is: %f\n", average_get_response_time);
+    printf("Total GET time is: %f secs\n", total_get_time);
+    printf("Total GET time per client is: %f milli-secs\n", total_get_time_per_client*pow(10,3));
+    printf("Average GET response time per client is: %f micro-secs\n", average_get_response_time*pow(10,6));
 }
 
 
