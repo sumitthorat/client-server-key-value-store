@@ -1,165 +1,13 @@
 #include "utility.h"
-
-// struct file_index{
-//     int total;
-//     struct file_index_node *head;
-//     struct file_index_node *end;
-// };
-
-// struct file_index_node{
-//     char *key;
-//     int position;
-//     char status;
-//     struct file_index_node *next;
-// };
-
-// struct file_entry{
-//     char *key;
-//     char *val;
-// };
-
-// pthread_mutex_t lock;
-// struct file_index *file_index;
-
-// void initialise_file_index();
-// char *find_in_PS(char *key);
-// void update_PS(char *key, char *val);
-// void remove_from_PS(char *key);
-
-// void initialise_file_index(){
-//     FILE *fp;
-//     //printf("Creating the persistant storage...\n");
-//     fp = fopen ("data.bin", "w+");
-//     fclose(fp);
-//     file_index = (struct file_index *)malloc(sizeof(struct file_index));
-//     file_index->head = file_index->end = NULL;
-//     file_index->total=0;
-// }
-
-// void update_PS(char *key, char *val){
-//     FILE *fp; 
-//     int pos, present=0;
-//     fp = fopen ("data.bin", "r+"); 
-//     struct file_entry entry = {key, val};
-//     struct file_index_node *inode = file_index->head;
-
-//     // pthread_mutex_lock(&lock);
-//     while (inode)
-//     {   
-//         if (strcmp(inode->key, key)==0 && inode->status == 'T')
-//         {
-//             pos = inode->position; 
-//             present = 1;
-//             break;
-//         }
-//         inode = inode->next;
-//     }
-//     if (present)
-//     {
-//         //printf("Key found in bitmap\n");
-//         fseek(fp, pos, SEEK_SET);
-//         fwrite(&entry, sizeof(struct file_entry), 1, fp);
-//     }
-//     else
-//     {
-//         //printf("Key not found in bitmap(New key)\n");
-//         fseek(fp, 0,SEEK_END);
-//         fwrite(&entry, sizeof(struct file_entry), 1, fp);
-//         file_index->total++;
-//         struct file_index_node *inode =  (struct file_index_node *)malloc(sizeof(struct file_index_node));
-//         inode->key = strdup(key);
-//         inode->position=ftell(fp);
-//         inode->status = 'T';
-//         if (!file_index->head)
-//         {
-//             file_index->head = file_index->end = inode;
-//             inode->next = NULL;
-//         }
-//         else
-//         {
-//             file_index->end->next = inode;
-//             inode->next = NULL;
-//             file_index->end = inode;  
-//         }
-//     }
-//     // pthread_mutex_unlock(&lock);
-//     fclose(fp);
-// }
-
-// char *find_in_PS(char *key){
-//     struct file_index_node *inode = file_index->head;
-//     struct file_entry entry;
-//     int pos, present=0;
-//     FILE *fp = fopen ("data.bin", "r"); 
-//     // pthread_mutex_lock(&lock);
-//     while (inode)
-//     {
-//         if (strcmp(inode->key, key)==0 && inode->status == 'T')
-//         {
-//             pos = inode->position; 
-//             present = 1;
-//             break;
-//         }
-//         inode = inode->next;
-//     }
-//     if(present)
-//     {
-//         //printf("Key found in bitmap\n");
-//         fseek(fp, pos, SEEK_SET);
-//         fread(&entry, sizeof(struct file_entry), 1, fp);
-//     }else
-//     {
-//         // pthread_mutex_unlock(&lock);
-//         return NULL;
-//     }
-
-//     // pthread_mutex_unlock(&lock);
-//     fclose(fp);
-//     return entry.val;
-// }
-
-// void remove_from_PS(char *key){
-//     struct file_index_node *inode = file_index->head;
-//     FILE *fp = fopen ("data.bin", "r+"); 
-//     // pthread_mutex_lock(&lock);
-//     while (inode)
-//     {
-//         if (strcmp(inode->key, key)==0 && inode->status == 'T')
-//         {
-//             inode->status='F';
-//             break;
-//         }
-//         inode = inode->next;
-//     }
-//     // pthread_mutex_unlock(&lock);
-//     fclose(fp);
-//     return;
-// }
-
-// #include <stdio.h>
-// #include <sys/types.h>
-// #include <sys/stat.h>
-// #include <fcntl.h>
-// #include <string.h>
-// #include <unistd.h>
-
 #include "../RW_lock/rwlock.h"
 #include <errno.h>
 #define NUM_OF_FILES 67
-extern int errno;
-
-struct file_index{
-    int total;
-    struct file_index_node *head;
-    struct file_index_node *end;
-    struct rwlock rwl;
-};
-
-struct file_index_node{
-    char *key;
-    int position;
-    char status;
-    struct file_index_node *next;
+#define INDEXER_LEN 997
+#define ENTRY_SIZE (KEY_SIZE + VAL_SIZE + 1) // KEY_SIZE + VAL_SIZE + 1
+struct indexer{
+    int cnt;
+    struct indexer_node *head;
+    pthread_mutex_t mutex;
 };
 
 struct file_entry{
@@ -167,7 +15,13 @@ struct file_entry{
     char *val;
 };
 
-struct file_index *file_index[NUM_OF_FILES];
+struct indexer_node {
+    char *digest;
+    unsigned int file_entry_no;
+    struct indexer_node *next;
+};
+
+struct indexer indexer_array[INDEXER_LEN];
 
 char *get_file_name(char *filename, int number)
 {
@@ -177,14 +31,13 @@ char *get_file_name(char *filename, int number)
     sprintf(num, "%d", number);
     strcat(file, num);
     strcat(file, ".bin");
-    strcat(filename,file);
+    strcat(filename, file);
     return filename;
 }
 
 void initialise_ps()
 {
-    for (int i = 0; i < NUM_OF_FILES; i++)
-    {
+    for (int i = 0; i < NUM_OF_FILES; i++) {
         char filename[30];
         get_file_name(filename, i);
         
@@ -196,141 +49,201 @@ void initialise_ps()
             close(fp);
         }
         close(fp);
-        file_index[i] = (struct file_index *)malloc(sizeof(struct file_index));
-        file_index[i]->head = file_index[i]->end = NULL;
-        file_index[i]->total=0;
-        init_rwlock(&(file_index[i]->rwl));
+    }
+
+    for (int i = 0; i < INDEXER_LEN; i++) {
+        indexer_array[i].cnt = 0;
+        indexer_array[i].head = NULL;
+        pthread_mutex_init(&(indexer_array[i].mutex), NULL);
     }
 }
 
-int get_file_hash_index(char *st)
-{
+// TODO: find a better hashing algo
+char * get_digest(char *key) {
+    char *digest = (char *)malloc(4);
+    return digest;
+}
+
+// TODO: find a better hashing algo
+int get_indexer_index(char *key) {
+    unsigned char *str = (unsigned char *)key;
+    unsigned long hash = 5381;
+    int c;
+    while (c = *str++)
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+
+    return hash % INDEXER_LEN;
+}
+
+int get_file_hash_index(char *st) {
     unsigned char *str = (unsigned char *)st;
     unsigned long hash = 5381;
     int c;
     while (c = *str++)
         hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
-    return hash%NUM_OF_FILES;
+
+    return hash % NUM_OF_FILES;
 }
 
 void update_PS(char *key, char *val){
-    char file[30];
-    int pos, present=0;
+    // printf("update ps\n");
+    char filename[30];
     int file_no = get_file_hash_index(key);
-    get_file_name(file, file_no);
-    char *filename = strdup(file);
-    
-    FILE *fp = fopen (filename, "r+");
-    // //printf("fp -> %p\n",fp);
-    struct file_entry entry = {key, val};
-    
-    struct file_index_node *inode = file_index[file_no]->head;
+    get_file_name(filename, file_no);
+    int indexer_index = get_indexer_index(key);
+    char *digest = get_digest(key);
 
-    // pthread_mutex_lock(&lock);
-    write_lock(&(file_index[file_no]->rwl));
-    while (inode)
-    {   
-        if (strcmp(inode->key, key)==0 && inode->status == 'T')
-        {
-            pos = inode->position; 
-            present = 1;
-            break;
+    int present = 0;
+    FILE *fp = fopen(filename, "r+"); 
+    // printf("Trying for lock in update ps\n");
+    pthread_mutex_lock(&(indexer_array[indexer_index].mutex));
+    // printf("Got lock in update ps\n");
+    struct indexer_node *head = indexer_array[indexer_index].head;
+    struct indexer_node *prev = NULL;
+    char buff[ENTRY_SIZE];
+    char *file_val;
+    while (head) {
+        if (strcmp(head->digest, digest) == 0) {
+            // we only store entry no. So multiply with 513 to get the exact location
+            fseek(fp, head->file_entry_no * ENTRY_SIZE , SEEK_SET); 
+            fread(buff, sizeof(buff), 1, fp);
+            
+            if (buff[0] == 'I') {
+                char *file_key = substring(buff, 1, KEY_SIZE + 1); // 1......(KEY_SIZE)
+                if (strcmp(file_key, key) == 0) {
+                    present = 1;
+                    break;
+                }
+            }
         }
-        inode = inode->next;
+
+        prev = head;
+        head = head->next;
     }
-    
-    if (present)
-    {
-        //printf("Key found in bitmap\n");
-        fseek(fp, pos, SEEK_SET);
-        fwrite(&entry, sizeof(struct file_entry), 1, fp);
-    }
-    else
-    {
-        struct file_index_node *inode =  (struct file_index_node *)malloc(sizeof(struct file_index_node));
-        //printf("Key not found in bitmap(New key)\n");
-        fseek(fp, 0, SEEK_END);
-        inode->position=ftell(fp);
-        fwrite(&entry, sizeof(struct file_entry), 1, fp);
-        file_index[file_no]->total++;
-        inode->key = strdup(key);
-        
-        inode->status = 'T';
-        if (!file_index[file_no]->head)
-        {
-            file_index[file_no]->head = file_index[file_no]->end = inode;
-            inode->next = NULL;
-        }
-        else
-        {
-            file_index[file_no]->end->next = inode;
-            inode->next = NULL;
-            file_index[file_no]->end = inode;  
-        }
-    }
-    // pthread_mutex_unlock(&lock);
-    write_unlock(&(file_index[file_no]->rwl));
+
     fclose(fp);
+
+    if(present) {
+        fseek(fp, head->file_entry_no * ENTRY_SIZE, SEEK_SET);
+        sprintf(buff, "%c%s%s", 'I', key, val);
+        fwrite(buff, sizeof(buff), 1, fp);
+    } else {
+        struct indexer_node *node =  (struct indexer_node *)malloc(sizeof(struct indexer_node));
+        fseek(fp, 0, SEEK_END);
+        node->file_entry_no = ftell(fp) / ENTRY_SIZE;
+        node->digest = strdup(digest);
+        sprintf(buff, "%c%s%s", 'I', key, val);
+        fwrite(buff, sizeof(buff), 1, fp);
+        indexer_array[indexer_index].cnt++;
+        if (!prev) {
+            indexer_array[indexer_index].head = node;
+            node->next = NULL;
+        } else {
+            prev->next = node;
+            node->next = NULL;
+        }
+    }
+
+    pthread_mutex_unlock(&(indexer_array[indexer_index].mutex));
+    // printf("leaving update ps\n");
 }
 
 char *find_in_PS(char *key){
+    // printf("find in ps\n");
     char filename[30];
     int file_no = get_file_hash_index(key);
     get_file_name(filename, file_no);
-    struct file_index_node *inode = file_index[file_no]->head;
-    struct file_entry entry;
-    int pos, present=0;
+    int indexer_index = get_indexer_index(key);
+    char *digest = get_digest(key);
+
+    int present = 0;
     FILE *fp = fopen (filename, "r+"); 
-    // pthread_mutex_lock(&lock);
-    //printf("Searching in file: %s\n", filename);
-    // read_lock(&(file_index[file_no]->rwl));
-    while (inode)
-    {
-        if (strcmp(inode->key, key)==0 && inode->status == 'T')
-        {
-            pos = inode->position; 
-            present = 1;
-            break;
+    pthread_mutex_lock(&(indexer_array[indexer_index].mutex));
+    // printf("Got lock in find in ps\n");
+    struct indexer_node *head = indexer_array[indexer_index].head;
+    char buff[ENTRY_SIZE];
+    char *file_val;
+    while (head) {
+        if (strcmp(head->digest, digest) == 0) {
+            // we only store entry no. So multiply with 513 to get the exact location
+            fseek(fp, head->file_entry_no * ENTRY_SIZE , SEEK_SET); 
+            fread(buff, sizeof(buff), 1, fp);
+            
+            if (buff[0] == 'I') {
+                char *file_key = substring(buff, 1, KEY_SIZE + 1); // 1......(KEY_SIZE)
+                if (strcmp(file_key, key) == 0) {
+                    present = 1;
+                    file_val = substring(buff, KEY_SIZE + 1, KEY_SIZE + VAL_SIZE + 1); // (KEY_SIZE + 1)......(KEY_SIZE + VAL_SIZE)
+                    break;
+                }
+            }
         }
-        inode = inode->next;
+
+        head = head->next;
     }
-    if(present)
-    {
-        //printf("Key found in bitmap\n");
-        fseek(fp, pos, SEEK_SET);
-        fread(&entry, sizeof(struct file_entry), 1, fp);
-    }else
-    {
-        // pthread_mutex_unlock(&lock);
+
+    pthread_mutex_unlock(&(indexer_array[indexer_index].mutex));
+    fclose(fp);
+
+    // printf("leaving find in ps\n");
+    if(present) {
+        return file_val;
+    } else {
         return NULL;
     }
 
-    // pthread_mutex_unlock(&lock);
-    // read_unlock(&(file_index[file_no]->rwl));
-    fclose(fp);
-    
-    return entry.val;
 }
 
-void remove_from_PS(char *key){
+int remove_from_PS(char *key){
+    // printf("remove from ps\n");
     char filename[30];
     int file_no = get_file_hash_index(key);
     get_file_name(filename, file_no);
-    struct file_index_node *inode = file_index[file_no]->head;
+    int indexer_index = get_indexer_index(key);
+    char *digest = get_digest(key);
+
+    int present = 0;
     FILE *fp = fopen (filename, "r+"); 
-    // pthread_mutex_lock(&lock);
-    write_lock(&(file_index[file_no]->rwl));
-    while (inode)
-    {
-        if (strcmp(inode->key, key)==0 && inode->status == 'T')
-        {
-            inode->status='F';
-            break;
+    pthread_mutex_lock(&(indexer_array[indexer_index].mutex));
+    // printf("Got lock in remove from ps\n");
+    struct indexer_node *head = indexer_array[indexer_index].head;
+    struct indexer_node *prev = NULL;
+    char buff[KEY_SIZE + 1];
+    char *file_val;
+    while (head) {
+        if (strcmp(head->digest, digest) == 0) {
+            // we only store entry no. So multiply with 513 to get the exact location
+            fseek(fp, head->file_entry_no * ENTRY_SIZE , SEEK_SET); 
+            fread(buff, sizeof(buff), 1, fp);
+            
+            if (buff[0] == 'I') {
+                char *file_key = substring(buff, 1, KEY_SIZE + 1); // 1......(KEY_SIZE)
+                if (strcmp(file_key, key) == 0) {
+                    if (prev == NULL) 
+                        indexer_array[indexer_index].head = head->next;
+                    else 
+                        prev->next = head->next;
+                    
+                    // write to file with 'D' entry
+                    // fseek(fp, head->file_entry_no * ENTRY_SIZE , SEEK_SET); 
+                    // fwrite();
+                    present = 1;
+                    file_val = substring(buff, KEY_SIZE + 1, KEY_SIZE + VAL_SIZE + 1); // (KEY_SIZE + 1)......(KEY_SIZE + VAL_SIZE)
+                    break;
+                }
+            }
         }
-        inode = inode->next;
+
+        prev = head;
+        head = head->next;
     }
-    // pthread_mutex_unlock(&lock);
-    write_unlock(&(file_index[file_no]->rwl));
+
+    pthread_mutex_unlock(&(indexer_array[indexer_index].mutex));
     fclose(fp);
-    return;
+    // printf("leaving remove from ps\n");
+    if(present) {
+        return 1;
+    } else {
+        return 0;
+    }
 }
