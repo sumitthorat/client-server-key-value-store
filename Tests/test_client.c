@@ -56,7 +56,7 @@ void generate_report(){
     double average_get_response_time = total_put_time/(NUM_OF_CLIENTS*NUM_OF_PUT);
     printf("\n");
     printf("Server parameters: \n");
-    printf("==================\n");
+     printf("==================\n");
     printf("Worker threads: 4\n");
     printf("Cache lines: 128\n");
     printf("\n");
@@ -172,6 +172,16 @@ void close_connection(int sockfd){
     close(sockfd);
 }
 
+int is_equal(char* a, char* b) {
+    for (int i = 0; i < KV_LEN; ++i) {
+        if (a[i] != b[i]) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
 void send_get_message(int t_id, int sockfd){
     // pthread_mutex_lock(&lock);
     int ridx = random() % NUM_OF_INTIAL_ENTRIES;
@@ -180,16 +190,24 @@ void send_get_message(int t_id, int sockfd){
     char *key, *val, *error;
     char* message = key_values[ridx];
     key = substring(message, 0, 4);
+    char* stored_val = substring(message, 4, 8);
    
     // printf("Sending GET request, key = %s\n", key);
     int code = get(key, &val, &error, sockfd);
 
     if (code == 0) {
         // printf("Response = %s:%s (Successful GET)\n", key, val);
+        if (!is_equal(val, stored_val)) {
+            printf("\n********WRONG*******\n Key = %s\nExpected = %s\nGot = %s\n", key, stored_val, val);
+        } else {
+            // printf("Correct!\n");
+        }
     } else {
         // printf("Err w/ K= %s\n", error);
     }
 }
+
+
 
 
 
@@ -218,6 +236,7 @@ void send_del_message(int t_id, int sockfd){
 }
 
 void send_put_message(int t_id, int sockfd){
+    
     // pthread_mutex_lock(&lock);
     int ridx = random() % NUM_OF_INTIAL_ENTRIES;
     // pthread_mutex_unlock(&lock);
@@ -228,11 +247,27 @@ void send_put_message(int t_id, int sockfd){
     key = substring(message, 0, 4);
     val = substring(message, 4, 8);
 
+    // printf("Sending PUT Request for key = %s\n", key);
+
+    // printf("Before update = %s ", val);
+
+    for (int i = 0; i < KV_LEN; ++i) {
+        val[i] = 'A' + random() % 26;
+        key_values[ridx][KV_LEN + i] = val[i];
+    }
+
+    // printf(", after = %s\n", key_values[ridx]);
+
     // printf("Sending PUT request, key = %s\n", key);
     int code = put(key, val, &error, sockfd);
 
     if (code == 0) {
         // printf("Response = %s:%s (Successful PUT)\n", key, val);
+        // if (!is_equal(val, )) {
+        //     printf("\n\n\n********WRONG***********\n\n\n");
+        // } else {
+        //     // printf("Correct!\n");
+        // }
     } else {
         // printf("Err w/ K= %s\n", error);
     }
