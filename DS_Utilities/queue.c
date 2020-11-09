@@ -33,6 +33,7 @@ void add(struct Queue* queue, char *req, int clientFd)
     node->req = strdup(req);
     if (queue->rear == NULL) { 
         queue->front = queue->rear = node; 
+        queue->size++;
         return;
     }
     node->next = NULL;
@@ -53,6 +54,12 @@ void pop(struct Queue* queue)
     queue->front = temp->next;
     free(temp);
     queue->size--;
+    if (queue->size==0)
+    {
+        queue->front=NULL;
+        queue->rear=NULL;
+    }
+    
 } 
 
 // Function to get front of queue 
@@ -69,4 +76,14 @@ struct QueueNode *bottom(struct Queue* queue)
 
 int size(struct Queue *queue){
     return queue->size;
+}
+
+void print_queue(struct Queue *Q){
+    struct QueueNode *temp = Q->front;
+    while (temp)
+    {
+        printf("Data:%s\n", temp->req);
+        temp=temp->next;
+    }
+    
 }
