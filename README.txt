@@ -1,3 +1,10 @@
+Teamname: SegFaultBusters
+Members:
+1) Rohit Kundu (203050030)
+2) Pramod S Rao (20305R007)
+3) Sumit Thorat (203050087)
+
+
 Commands:
 
 To clean the working directory:
@@ -30,5 +37,23 @@ Key value store design:
         - For any GET call, the request handler first searches the cache.
             - If found, it returns the value immediately and updates the frequency and Timestamp
             - If not, it will then go to the PS and search there. Either success(200) or error of (240)
+        - When a get to a request happens, and it is not in the cache, the key-value is brought to the cache
+          and response is sent for a higher locality of client requests.
+    
+    PUT call design:
+        - For any PUT call, it is first pushed into the cache and the dirty value is set to 1. This value is later
+          pushed into the PS only when it has to be evicted from the cache due to LRU. 
+        - The above point elaborates the lazy update technique.
+
+    DEL call design:
+        - The key is marked as deleted in the cache line, and then it is deleted from the PS.
+        - The DEL call is quite simple.
+    
+    Persistant storage design:
+        - 
+    
+
+
+
 
 Note: Server port will be read from server_config.txt

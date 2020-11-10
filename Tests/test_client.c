@@ -398,6 +398,7 @@ void *thread_fun(void *args){
         default:
             return "Error: invalid option";
         }
+        usleep(1000);
     }
     close_connection(sockfd);
 }
