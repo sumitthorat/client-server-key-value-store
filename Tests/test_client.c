@@ -218,10 +218,13 @@ void send_get_message(int t_id, int sockfd){
     
     if (code == 0) {
         // printf("Response = %s:%s (Successful GET)\n", key, val);
-        if (!is_equal(val, stored_val, KV_LEN)) {
+        // if (!is_equal(val, stored_val, KV_LEN)) {
+        //     printf("\n********WRONG*******\n Key = %s\nExpected = %s\nGot = %s\n", key, stored_val, val);
+        // } else {
+        //     // printf("Correct!\n");
+        // }
+        if (strcmp(val, stored_val) != 0) {
             printf("\n********WRONG*******\n Key = %s\nExpected = %s\nGot = %s\n", key, stored_val, val);
-        } else {
-            // printf("Correct!\n");
         }
     } else {
         // printf("Err w/ K= %s\n", error);
@@ -232,11 +235,10 @@ void send_get_message(int t_id, int sockfd){
 void send_del_message(int t_id, int sockfd){
 
     char *key, *val, *error;
-    // pthread_mutex_lock(&lock);
+    pthread_mutex_lock(&lock);
     int ridx = random() % NUM_OF_INTIAL_ENTRIES;
     key_values[ridx] = key_values[NUM_OF_INTIAL_ENTRIES - 1];
     NUM_OF_INTIAL_ENTRIES--;
-    // pthread_mutex_unlock(&lock);
 
     char* message = key_values[ridx];
 
@@ -244,6 +246,8 @@ void send_del_message(int t_id, int sockfd){
     key = substring(message, 0, KV_LEN);
     // printf("Sending DEL request, key = %s\n", key);
     int code = del(key, &error, sockfd);
+    pthread_mutex_unlock(&lock);
+
 
     if (code == 0) {
         // printf("Response = %s (Successful DEL)\n", key);
@@ -306,23 +310,20 @@ void populate_kv_store(int sockfd){
     printf("Populating the KV store with below messages...\n");
     while (i<NUM_OF_INTIAL_ENTRIES)
     {
+        int temp = KV_LEN + 1 + (random() % KV_LEN);
         // printf("Starting New req\n");
-        for (int i=0; i < RSIZE; i++)
+        for (int i = 0; i < temp; i++)
             message[i] = 'A' + random() % 26;
 
-        message[RSIZE - 1] = (char)0;
+        message[temp] = (char)0;
         key_values[i] =  strdup(message);
-        // printf("Key Val: %s\n",message);
         
-
         char *key, *val, *error;
         key = substring(key_values[i], 0, KV_LEN);
         val = substring(key_values[i], KV_LEN, RSIZE - 1);
-        // key = substring(key_values[i], 0, 1 + random() % KV_LEN); // any random length key
-        int temp = 1 + random() % (KV_LEN - 2);
-        // printf("temp = %d\n", temp);
-        val[temp] = '\0';
-        sprintf(message, "%s%s", key, val);
+        
+        
+        // sprintf(key_values[i], "%s%s", key, val);
         // printf("Msg: %ld %ld %ld\n", strlen(message + i), strlen(key), strlen(val));
         int code = put(key, val, &error, sockfd);
         // printf("Value: %s Code: %d\n", val, code);

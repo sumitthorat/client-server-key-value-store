@@ -2,7 +2,7 @@
 
 double total_get_time=0;
 double total_put_time=0;
-pthread_mutex_t get_time_lock, put_time_lock;
+pthread_mutex_t get_time_lock, put_time_lock, del_time_lock;
 
 struct time_stats *ts;
 
@@ -11,6 +11,9 @@ struct time_stats* initialise_timer(){
     ts->total_get_time = 0;
     ts->total_put_time = 0;
     ts->total_del_time = 0;
+    pthread_mutex_init(&get_time_lock, NULL);
+    pthread_mutex_init(&put_time_lock, NULL);
+    pthread_mutex_init(&del_time_lock, NULL);
     return ts;
 }
 
@@ -30,13 +33,19 @@ double get_total_del_time(){
     return ts->total_del_time;
 }
 
-void add_padding(char *s) {
-    if (strlen(s) >= KV_LEN)
-        return ;
+
+// Makes 's' a string of length KV_LEN, where the last byte (index = KV_LEN) is \0
+char* add_padding(char *s) {
+    char* ret = (char*) malloc(sizeof(char) * (KV_LEN + 1));
+    strcpy(ret, s);
 
     for (int i = strlen(s); i < KV_LEN; i++) {
-            s[i] = '.';
+            ret[i] = '.';
     }
+
+    ret[KV_LEN] = '\0';
+
+    return ret;
 }
 
 void remove_padding(char *s) {
@@ -49,14 +58,16 @@ void remove_padding(char *s) {
 }
 
 int get(char* key, char** val, char** error, int serverfd) {
-    if( !key ){
-        *error = (char*) malloc(sizeof(char) * KV_LEN);
+    // printf("Inside get api\n");
+
+    if( !key ) {
+        *error = (char*) malloc(sizeof(char) * (KV_LEN + 1));
         strncpy(*error, "Error: Memory not allocated to key", KV_LEN);
         return -1;
     }
-    else if( strlen(key) > KV_LEN)
+    else if (strlen(key) > KV_LEN)
     {
-        *error = (char*) malloc(sizeof(char) * KV_LEN);
+        *error = (char*) malloc(sizeof(char) * (KV_LEN + 1));
         strncpy(*error, "Error: Key size is greater than 256B", KV_LEN);
         return -1;
     }
@@ -66,19 +77,33 @@ int get(char* key, char** val, char** error, int serverfd) {
     tv.tv_sec = 5;
     tv.tv_usec = 0;
     // setsockopt(serverfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
-    add_padding(key);
-    char req[RSIZE];
+    // printf("Before add padding\n");
+    char* padded_key = add_padding(key);
+    // printf("After add padding key %s, len = %d\n", padded_key, strlen(padded_key));
+    char* padded_val = add_padding("\0"); // It will generate a length 256 bytes string
+    // printf("After add padding val %s, len = %d\n", padded_val, strlen(padded_val));
+
+    char req[RSIZE + 1];
+    req[RSIZE] = '\0';
     req[0] = '1';
-    strncpy(req + KEY_START_IDX, key, KV_LEN);
-    bzero(req + VAL_START_IDX, KV_LEN);
+    strncpy(req + KEY_START_IDX, padded_key, KV_LEN);
+    strncpy(req + VAL_START_IDX, padded_val, KV_LEN);
+    // printf("Req = %s, len = %d\n", req, strlen(req));
+
+    // printf("Req: %s\n", req);
     
     // Send request
     clock_gettime(CLOCK_REALTIME, &start);
     int writen = write(serverfd, req, RSIZE);
 
     // Wait for response
-    char* resp = (char*) malloc(sizeof(char) * RSIZE);
-    int readn = read(serverfd, resp, RSIZE);
+    char* resp = (char*) malloc(sizeof(char) * (RSIZE + 1));
+    ssize_t readn = read(serverfd, resp, RSIZE);
+    resp[RSIZE] = '\0';
+
+    // printf("Resp = %s, len = %d\n", resp, strlen(resp));
+
+    // printf("Resp = %s\n", resp);
 
     clock_gettime(CLOCK_REALTIME, &end);
     double time_spent;
@@ -93,72 +118,97 @@ int get(char* key, char** val, char** error, int serverfd) {
     {
         time_spent = ((end.tv_sec - start.tv_sec) +(end.tv_nsec - start.tv_nsec)) / BILLION;
     }
-    // pthread_mutex_lock(&get_time_lock);
+    pthread_mutex_lock(&get_time_lock);
     ts->total_get_time+=time_spent;
-    // pthread_mutex_unlock(&get_time_lock);
+    pthread_mutex_unlock(&get_time_lock);
     // printf("Response time for GET is %f micro-seconds\n", time_spent*pow(10,6));
     
-    remove_padding(key);
+    free(padded_key);
+    free(padded_val);
+
+    // printf("After free\n");
+
     // Malloc val/error memory
     if (readn <= 0 || (unsigned char) resp[0] == ERROR) {
-        *error = (char*) malloc(sizeof(char) * KV_LEN);
+        *error = (char*) malloc(sizeof(char) * (KV_LEN + 1));
         strncpy(*error, resp + VAL_START_IDX, KV_LEN);
+        (*error)[KV_LEN] = '\0';
         remove_padding(*error);
+        // printf("Leaving get api err\n");
         return -1;
     }
 
-    *val = (char*) malloc(sizeof(char) * KV_LEN);
+    *val = (char*) malloc(sizeof(char) * (KV_LEN + 1));
+    // printf("Before stncpy\n");
     strncpy(*val, resp + VAL_START_IDX, KV_LEN);
+    // printf("Before KVLEN\n");
+    (*val)[KV_LEN] = '\0';
+    // printf("Before removing pad\n");
     remove_padding(*val);
     return 0;
 }
 
 
 int put(char* key, char* val, char** error, int serverfd) {
-    if( !key ){
-        *error = (char*) malloc(sizeof(char) * KV_LEN);
+    // printf("Inside put api\n");
+
+    if(!key) {
+        *error = (char*) malloc(sizeof(char) * (KV_LEN + 1));
         strncpy(*error, "Error: Memory not allocated to key", KV_LEN);
         return -1;
-    }
-    else if( strlen(key) > KV_LEN)
+    } 
+    else if(strlen(key) > KV_LEN)
     {
-        *error = (char*) malloc(sizeof(char) * KV_LEN);
+        *error = (char*) malloc(sizeof(char) * (KV_LEN + 1));
         strncpy(*error, "Error: Key size is greater than 256B", KV_LEN);
         return -1;
     }
-    if( !val ){
-        *error = (char*) malloc(sizeof(char) * KV_LEN);
+    if(!val){
+        *error = (char*) malloc(sizeof(char) * (KV_LEN + 1));
         strncpy(*error, "Error: Memory not allocated to val", KV_LEN);
         return -1;
     }
-    else if( strlen(val) > KV_LEN)
+    else if(strlen(val) > KV_LEN)
     {
-        *error = (char*) malloc(sizeof(char) * KV_LEN);
+        *error = (char*) malloc(sizeof(char) * (KV_LEN + 1));
         strncpy(*error, "Error: Value size is greater than 256B", KV_LEN);
         return -1;
     }
-    char req[RSIZE];
-    req[0] = '2';
+
+
     
-    add_padding(key);
-    add_padding(val);
+
+    char* padded_key = add_padding(key);
+    char* padded_val = add_padding(val);
+
+
     // printf("After padding: key %ld val %ld\n", strlen(key), strlen(val));
-    struct timespec start, end;
+    
     // struct timeval tv;
     // tv.tv_sec = 5;
     // tv.tv_usec = 0;
     // setsockopt(serverfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
-    strncpy(req + KEY_START_IDX, key, KV_LEN);
-    strncpy(req + VAL_START_IDX, val, KV_LEN);
+    char req[RSIZE + 1];
+    req[0] = '2';
+    req[RSIZE] = '\0';
+    strncpy(req + KEY_START_IDX, padded_key, KV_LEN);
+    strncpy(req + VAL_START_IDX, padded_val, KV_LEN);
 
+    // printf("PUT REQ Being sent = %s\n%d\n", req, strlen(req));
+    struct timespec start, end;
     // Send request
     clock_gettime(CLOCK_REALTIME, &start);
     size_t writen = write(serverfd, req, RSIZE);
 
     // Wait for response
-    char* resp = (char*) malloc(sizeof(char) * RSIZE);
+    char* resp = (char*) malloc(sizeof(char) * (RSIZE + 1));
     size_t readn = read(serverfd, resp, RSIZE);
+    resp[RSIZE] = '\0';
+
+
+    // printf("PUT RESP Rcvd = %s\n%lu\n", resp, readn);
+
     clock_gettime(CLOCK_REALTIME, &end);
     double time_spent;
     if ((end.tv_nsec-start.tv_nsec)<0)
@@ -173,55 +223,71 @@ int put(char* key, char* val, char** error, int serverfd) {
         time_spent = ((end.tv_sec - start.tv_sec) +(end.tv_nsec - start.tv_nsec)) / BILLION;
     }
     
-    // pthread_mutex_lock(&put_time_lock);
+    pthread_mutex_lock(&put_time_lock);
     ts->total_put_time+=time_spent;
-    // pthread_mutex_unlock(&put_time_lock);
+    pthread_mutex_unlock(&put_time_lock);
 	// printf("Response time for PUT is %f micro-seconds \n", time_spent*pow(10,6));
-    
-    remove_padding(key);
-    remove_padding(val);
+
     // printf("After remove_padding %ld %ld %s\n", strlen(key), strlen(val), resp);
     // Malloc error memory
+    free(padded_key);
+    free(padded_val);
+
     if (readn <= 0) {
+        // printf("Leaving put api, readn <= 0\n");
         return -1;
     }
 
     if ((unsigned char) resp[0] == ERROR) {
         // printf("Error: %s\n", *error);
-        *error = (char*) malloc(sizeof(char) * KV_LEN);
+        *error = (char*) malloc(sizeof(char) * (KV_LEN + 1));
         strncpy(*error, resp + VAL_START_IDX, KV_LEN);
+        (*error)[KV_LEN] = '\0';
         remove_padding(*error);
+        // printf("Leaving put api err\n");
         return -1;
     }
+
+    // printf("Leaving put api\n");
     return 0;
 }
 
 
 int del(char* key, char** error, int serverfd) {
+
+    // printf("Inside del api\n");
+
     if( !key ){
-        *error = (char*) malloc(sizeof(char) * KV_LEN);
+        *error = (char*) malloc(sizeof(char) * (KV_LEN + 1));
         strncpy(*error, "Error: Memory not allocated to key", KV_LEN);
         return -1;
     }
     else if( strlen(key) > KV_LEN)
     {
-        *error = (char*) malloc(sizeof(char) * KV_LEN);
+        *error = (char*) malloc(sizeof(char) * (KV_LEN + 1));
         strncpy(*error, "Error: Key size is greater than 256B", KV_LEN);
         return -1;
     }
-    char req[RSIZE];
-    struct timespec start, end;
+
+    char* padded_key = add_padding(key);
+    char* padded_val = add_padding("\0");
+
+    char req[RSIZE + 1];
     req[0] = '3';
-    add_padding(key);
-    strncpy(req + KEY_START_IDX, key, KV_LEN);
+    req[RSIZE] = '\0';
+    strncpy(req + KEY_START_IDX, padded_key, KV_LEN);
+    strncpy(req + VAL_START_IDX, padded_val, KV_LEN);
 
     // Send request
+    struct timespec start, end;
     clock_gettime(CLOCK_REALTIME, &start);
     int writen = write(serverfd, req, RSIZE);
 
     // Wait for response
-    char* resp = (char*) malloc(sizeof(char) * RSIZE);
+    char* resp = (char*) malloc(sizeof(char) * (RSIZE + 1));
     int readn = read(serverfd, resp, RSIZE);
+    resp[RSIZE] = '\0';
+
     clock_gettime(CLOCK_REALTIME, &end);
     double time_spent;
     if ((end.tv_nsec-start.tv_nsec)<0)
@@ -235,17 +301,25 @@ int del(char* key, char** error, int serverfd) {
     {
         time_spent = ((end.tv_sec - start.tv_sec) +(end.tv_nsec - start.tv_nsec)) / BILLION;
     }
-    ts->total_del_time+=time_spent;
 
-    remove_padding(key);
+    pthread_mutex_lock(&del_time_lock);
+    ts->total_del_time+=time_spent;
+    pthread_mutex_unlock(&del_time_lock);
+
+    free(padded_key);
+    free(padded_val);
+
     // Malloc error memory
     if (readn <= 0 || (unsigned char) resp[0] == ERROR) {
-        *error = (char*) malloc(sizeof(char) * KV_LEN);
+        *error = (char*) malloc(sizeof(char) * (KV_LEN + 1));
         strncpy(*error, resp + VAL_START_IDX, KV_LEN);
+        (*error)[KV_LEN] = '\0';
         remove_padding(*error);
+        // printf("Leaving del api err\n");
         return -1;
     }
 
+    // printf("Leaving del api\n");
     return 0;
 }
 
