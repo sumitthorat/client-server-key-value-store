@@ -26,6 +26,9 @@ double get_total_put_time(){
 }
 
 void add_padding(char *s) {
+    if (strlen(s) >= KV_LEN)
+        return ;
+
     for (int i = strlen(s); i < KV_LEN; i++) {
             s[i] = '.';
     }
