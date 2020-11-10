@@ -1,11 +1,12 @@
 Teamname: SegFaultBusters
+
 Members:
 1) Rohit Kundu (203050030)
 2) Pramod S Rao (20305R007)
 3) Sumit Thorat (203050087)
 
 
-Commands:
+Commands to run the server and client:
 
 To clean the working directory:
     use command "make clean"
@@ -16,8 +17,25 @@ To run the server:
 To run test client:
     use command "make run_test_client"
 
+Server configurations (server_config.txt):
+    - Server port
+    - Number of worker threads
+    - Number of cache lines
+
+Using the server_config.txt:
+   - SERVER_PORT : Port number which server will listen to
+   - NUM_WORKER_THREADS: Number of worker threads the server will start.
+   - CACHE_LEN: The number of cache lines the server will have.
+
 
 Key value store design:
+
+    Server design:
+        - The server starts the number of threads mentioned in the server_config.txt file
+        - These threads will be assigned incoming connections in a round robin fashion.
+        - These threads use epoll to listen to the connected threads
+        - As per the problem statement mentioned in the PDF file, Multiple requests for the same key is done atomically. We handle this using a hash table, and in case there are such requests, we add it to a queue and process these requests by dequeuing from the queue.
+        - ERROR code: 240, SUCCESS CODE: 200, these are unsigned chars.
 
     Cache design:
         - The number of cache lines can be configured in server_config.txt
@@ -31,7 +49,7 @@ Key value store design:
             - Key-value
             - Timestamp (For LRU)
             - Frequency (For LFU)
-            - Each line has a write and read lock.
+            - Each line has a write and read lock for high concurrency.
     
     GET call design:
         - For any GET call, the request handler first searches the cache.
@@ -46,14 +64,49 @@ Key value store design:
         - The above point elaborates the lazy update technique.
 
     DEL call design:
-        - The key is marked as deleted in the cache line, and then it is deleted from the PS.
-        - The DEL call is quite simple.
+        - The key is marked as deleted in the cache line. 
+        - It is deleted from the PS.
     
-    Persistant storage design:
-        - 
+    Persistent storage design:
+        - We have 67(prime number) data files in the Persistent storage folder. 
+        - We use three custom algorithms to index into the key-value into location of the key value in  the persistent storage. 
+        - When a key-value arrives to the persistent storage, the key is first sent to an hashing function
+          to find the hash index into our "indexer". Each location at the indexer contains a linked list of inodes.
+        - The inode entries contain information to point to locations of the particular key-value in that file.
+        - Instead of storing the entire key into the inode, in order to save space, we are creating a digest of 64 bit
+          (8 Bytes) to save a lot of space and utilise our memory effectively.
+        - Therefore, in order to get a key-value, we create a digest of the key, and compare with the digests in the inodes and then seek into the file and fetch the key-value, and then compare once more the key and fetched key from the Persistent storage to make sure there was no hashing collision. 
+
+
+KVClient APIs (Usage):
+
+    int get(key, value, error, socket_fd):
+        - char* - key - The key we want to get.
+        - char** - value - Value you want to pass.
+        - char** - error - If incase of error, this is set.
+        - int - socket_fd - Pass the FD of the socket.
+    Return value: less than 0 indicates an error with request (Key not found, Invalid message size or error code)
     
+    put(key, value, error, socket_fd):
+        - char* - key - The key we want to get.
+        - char* - value - Value you want to pass.
+        - char** - error - If incase of error, this is set.
+        - int - socket_fd - Pass the FD of the socket.
+    Return value: less than 0 indicates an error with request (Key not found, Invalid message size or error code)
+    
+    del(key, error, socket)
+       - char* - key - The key you want to delete.
+       - char** - error - In case of error, this value is set to the error message.
+       - int - socket - Pass the socket of the connection.
+    Return value less than 0 indicates an error with request (Key not found, Invalid message size or error code)
 
-
-
-
-Note: Server port will be read from server_config.txt
+Using the client_config.txt:
+   - Mention the server port and the server IP in the first two lines.
+   - The NO_OF_GET/NO_OF_PUT/NO_OF_DEL is the number of gets, number of puts and deletes respectively per client.
+   - NO_OF_CLIENTS is the number of clients you want to start concurrently
+   - NO_OF_INITIAL_ENTRIES is the number of initial entries we want to start off with.
+    
+    Note(s): !-IMPORTANT-! 
+    - PLEASE DON’T HAVE “(NO_OF_DEL * NO_OF_CLIENTS) > NO_OF_INITIAL_ENTRIES” in your configuration.
+      This will cause a floating point exception.
+    - If you want to increase the number of initial entries more than 1000, please increase the array size in test_client.c at line number 28 and then run “make run_test_client”
