@@ -56,7 +56,7 @@ int get(char* key, char** val, char** error, int serverfd) {
     // pthread_mutex_unlock(&get_time_lock);
     // printf("Response time for GET is %f micro-seconds\n", time_spent*pow(10,6));
     // Malloc val/error memory
-    if (readn <= 0 || resp[0] == ERROR) {
+    if (readn <= 0 || (unsigned char) resp[0] == ERROR) {
         *error = (char*) malloc(sizeof(char) * KV_LEN);
         strncpy(*error, resp + VAL_START_IDX, KV_LEN);
         return -1;
@@ -113,7 +113,7 @@ int put(char* key, char* val, char** error, int serverfd) {
         return -1;
     }
 
-    if (resp[0] == ERROR) {
+    if ((unsigned char) resp[0] == ERROR) {
         *error = (char*) malloc(sizeof(char) * KV_LEN);
         strncpy(*error, resp + VAL_START_IDX, KV_LEN);
         return -1;
@@ -135,7 +135,7 @@ int del(char* key, char** error, int serverfd) {
     int readn = read(serverfd, resp, RSIZE);
 
     // Malloc error memory
-    if (readn <= 0 || resp[0] == ERROR) {
+    if (readn <= 0 || (unsigned char) resp[0] == ERROR) {
         *error = (char*) malloc(sizeof(char) * KV_LEN);
         strncpy(*error, resp + VAL_START_IDX, KV_LEN);
         return -1;

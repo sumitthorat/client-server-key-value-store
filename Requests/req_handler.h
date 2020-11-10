@@ -8,22 +8,31 @@
 #define SUCCESS_CODE 200
 #define ERROR_CODE 240
 
-#define SET_MSG(s, code, a, b) sprintf(s, "%c%s%s", code, a, b)
-
-
+#define SET_MSG(s, code, a, b) add_padding(s, code, a, b)
 
 void handle_requests(char *msg, char*, int id);
 void get(char *msg, char*, int id);
 void put(char *msg, char*, int id);
 void del(char *msg, char*, int id);
 
+void add_padding(char *s, int code, char *a, char *b) {
+    sprintf(s, "%c%s%s", code, a, b);
+
+    for (int i = 1 + strlen(a) + strlen(b); i < MSG_SIZE; i++) {
+            s[i] = '.';
+    }
+}
 
 void handle_requests(char *msg, char* resp, int id) {
     char *key = substring(msg, 0, KEY_SIZE);
-    msg = substring(msg, 0, MSG_SIZE + 1);
-    if (strlen(msg) - 1 > MSG_SIZE) {
-        SET_MSG(resp, ERROR_CODE, key, "Erro");
-        printf("handle req: set msg %s %ld\n", resp, strlen(msg)); 
+    // msg = substring(msg, 0, MSG_SIZE + 1);
+    if (strlen(msg) > MSG_SIZE) {
+        SET_MSG(resp, ERROR_CODE, key, "ERROR: MSG SIZE IS MORE THAN 513 BYTES");
+        // printf("handle req: set msg %s %ld\n", resp, strlen(msg)); 
+        return;
+    } else if (strlen(msg) < MSG_SIZE) {
+        SET_MSG(resp, ERROR_CODE, key, "ERROR: MSG SIZE IS LESS THAN 513 BYTES");
+        // printf("handle req: set msg %s %ld\n", resp, strlen(msg)); 
         return;
     }
 
@@ -40,7 +49,7 @@ void handle_requests(char *msg, char* resp, int id) {
             del(msg + 1, resp, id);
             break;
         default:
-            SET_MSG(resp, ERROR_CODE, key, "Erro"); 
+            SET_MSG(resp, ERROR_CODE, key, "Error: Invalid request"); 
     }
 }
 
@@ -72,7 +81,7 @@ void get(char *msg, char* resp, int id) {
         if(!val) {
             //printf("Error: key not present\n");
             // return "Error: key not present";
-            SET_MSG(resp, ERROR_CODE, key, "Erro"); 
+            SET_MSG(resp, ERROR_CODE, key, "ERROR: GET key not found"); 
         }
         else {
 
@@ -94,7 +103,7 @@ void get(char *msg, char* resp, int id) {
             write_unlock(&(loc->rwl));
             //printf("Got value =\"%s\"\n", val);
             SET_MSG(resp, SUCCESS_CODE, key, val);  
-            // return val; //TODO: add ENTRY to the cache
+            // return val;
         }
 
         free(key);
@@ -153,7 +162,7 @@ void put(char *msg, char* resp, int id) {
     // }
     
     
-    write_unlock(&(loc->rwl)); //TODO: can we move this before update_PS ?
+    write_unlock(&(loc->rwl));
     //printf("Unlocked write lock at %d\n", i);
     SET_MSG(resp, SUCCESS_CODE, key, val);
 }
@@ -162,15 +171,18 @@ void put(char *msg, char* resp, int id) {
 void del(char *msg, char* resp, int id) {
     //printf("del\n");
     char *key =  substring(msg, 0, KEY_SIZE);
-    // TODO: Write the response back for a delete request, whether success or failure
     struct entry_with_status *entry_with_status_val = find_update_cache_line(key, NULL, 3, id);
-
-    // //printf("Entry %s\n", entry_with_status_val->entry->val ? entry_with_status_val->entry->val : "NULL");
-
-    // TODO: Change the second param to success/error
-    SET_MSG(resp, SUCCESS_CODE, key, "NULL"); 
+    ENTRY *loc = entry_with_status_val->entry;
+    int status = entry_with_status_val->status;
+    // //printf("Entry %s\n", entry_with_status_val->entry->val ? entry_with_status_val->entry->val : "NULL");    
     
     free(entry_with_status_val);
-    remove_from_PS(key);
+    int code = remove_from_PS(key);
+
+    if (code == 1 || status == 1) 
+        SET_MSG(resp, SUCCESS_CODE, key, "Success: Key deleted"); 
+    else 
+        SET_MSG(resp, SUCCESS_CODE, key, "Error: DEL key not found"); 
+
     free(key);
 }

@@ -71,7 +71,7 @@ void connect_send() {
         char* resp = (char*) malloc(sizeof(char) * MSG_SIZE);
         int readn = read(sockfd, resp, MSG_SIZE);
         resp[MSG_SIZE]=(char)0;
-        unsigned int status_code = *resp;
+        unsigned char status_code = *resp;
         printf("Recv Msg: %s with status: %d\n", resp, status_code);
         if (n < 0) {
             error("Error writing to socket");

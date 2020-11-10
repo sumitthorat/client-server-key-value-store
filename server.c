@@ -11,7 +11,7 @@
 
 #include "DS_Utilities/ds_defs.h"
 #include "Requests/req_handler.h"
-
+#define BUFFER_SIZE 1024
 int resp_count=0, recv_count =0, in_queue=0, proc_from_queue=0;
 int SERVER_PORT;
 int NUM_WORKER_THREADS;
@@ -128,21 +128,20 @@ void* worker(void* arg) {
         // printf("WT = %d, New round\n", id);
         int nfds = epoll_wait(worker_epoll_fds[id], events, 8, 10000);
         // printf("WT = %d, After epooll walit\n", id);
-        if (nfds == 0)
-        {
-            printf("WT: %d epoll time out\n", id);
+        if (nfds == 0) {
+            // printf("WT: %d epoll time out\n", id);
         }
         
-        char buff[MSG_SIZE];
-        int buff_len = MSG_SIZE; 
+        char buff[BUFFER_SIZE];
 
         char* resp = (char*) malloc(sizeof(char) * MSG_SIZE);
 
         for (int i = 0; i < nfds; ++i) {
-            memset(buff, 0, buff_len);
-            ssize_t len = read(events[i].data.fd, buff, buff_len);
-
+            memset(buff, 0, BUFFER_SIZE);
+            ssize_t len = read(events[i].data.fd, buff, BUFFER_SIZE - 1);
+            buff[len] = '\0';
             // printf("WT = %d, Buff = %s\n", id, buff);
+            // printf("Read %lu Bytes\n", len);
             if (len == 0) {
                 close(events[i].data.fd);
                 continue;

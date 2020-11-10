@@ -58,7 +58,6 @@ void initialise_ps()
     }
 }
 
-// TODO: find a better hashing algo
 unsigned long long get_digest(const char *str) {       
     const unsigned long long mulp = 2654435789;
     unsigned long long mix = 0;
@@ -70,7 +69,6 @@ unsigned long long get_digest(const char *str) {
     return mix ^ (mix << 37);
 }
 
-// TODO: find a better hashing algo
 int get_indexer_index(char *key) {
     unsigned char *str = (unsigned char *)key;
     unsigned long hash = 5381;

@@ -14,8 +14,8 @@
 #define KEY_START_IDX 1
 #define VAL_START_IDX 257
 #define KV_LEN 256
-#define ERROR (char) 240
-#define SUCCESS (char) 200
+#define ERROR (unsigned char) 240
+#define SUCCESS (unsigned char) 200
 
 #define BILLION  1000000000.0
 
