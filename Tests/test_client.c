@@ -194,7 +194,8 @@ void send_get_message(int t_id, int sockfd){
    
     // printf("Sending GET request, key = %s\n", key);
     int code = get(key, &val, &error, sockfd);
-
+    pthread_mutex_unlock(&lock);
+    
     if (code == 0) {
         // printf("Response = %s:%s (Successful GET)\n", key, val);
         if (!is_equal(val, stored_val)) {
