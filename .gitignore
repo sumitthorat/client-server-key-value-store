@@ -14,3 +14,4 @@ Server
 test_client
 server_config.txt
 Tests/client_config.txt
+.fuse*

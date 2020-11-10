@@ -13,7 +13,7 @@
 
 #include "../KVClient/KVClientLibrary.h"
 
-#define MSG_SIZE 9
+
 
 int SERVER_PORT;
 char *SERVER_IP;
@@ -168,12 +168,14 @@ int connect_to_server(){
     return sockfd;
 }
 
+
 void close_connection(int sockfd){
     close(sockfd);
 }
 
-int is_equal(char* a, char* b) {
-    for (int i = 0; i < KV_LEN; ++i) {
+
+int is_equal(char* a, char* b, int num_bytes) {
+    for (int i = 0; i < num_bytes; ++i) {
         if (a[i] != b[i]) {
             return 0;
         }
@@ -182,6 +184,7 @@ int is_equal(char* a, char* b) {
     return 1;
 }
 
+
 void send_get_message(int t_id, int sockfd){
     pthread_mutex_lock(&lock);
     int ridx = random() % NUM_OF_INTIAL_ENTRIES;
@@ -189,8 +192,8 @@ void send_get_message(int t_id, int sockfd){
 
     char *key, *val, *error;
     char* message = key_values[ridx];
-    key = substring(message, 0, 4);
-    char* stored_val = substring(message, 4, 8);
+    key = substring(message, 0, KV_LEN);
+    char* stored_val = substring(message, KV_LEN, RSIZE - 1);
    
     // printf("Sending GET request, key = %s\n", key);
     int code = get(key, &val, &error, sockfd);
@@ -198,7 +201,7 @@ void send_get_message(int t_id, int sockfd){
     
     if (code == 0) {
         // printf("Response = %s:%s (Successful GET)\n", key, val);
-        if (!is_equal(val, stored_val)) {
+        if (!is_equal(val, stored_val, KV_LEN)) {
             printf("\n********WRONG*******\n Key = %s\nExpected = %s\nGot = %s\n", key, stored_val, val);
         } else {
             // printf("Correct!\n");
@@ -207,9 +210,6 @@ void send_get_message(int t_id, int sockfd){
         // printf("Err w/ K= %s\n", error);
     }
 }
-
-
-
 
 
 void send_del_message(int t_id, int sockfd){
@@ -224,7 +224,7 @@ void send_del_message(int t_id, int sockfd){
     char* message = key_values[ridx];
 
 
-    key = substring(message, 0, 4);
+    key = substring(message, 0, KV_LEN);
     // printf("Sending DEL request, key = %s\n", key);
     int code = del(key, &error, sockfd);
 
@@ -245,8 +245,8 @@ void send_put_message(int t_id, int sockfd){
     char *key, *val, *error;
     char* message = key_values[ridx];
 
-    key = substring(message, 0, 4);
-    val = substring(message, 4, 8);
+    key = substring(message, 0, KV_LEN);
+    val = substring(message, KV_LEN, RSIZE - 1);
 
     // printf("Sending PUT Request for key = %s\n", key);
 
@@ -283,23 +283,24 @@ void send_put_message(int t_id, int sockfd){
 // Phase 3 Get(To do the get and put, ) and put
 
 void populate_kv_store(int sockfd){
-    char message[MSG_SIZE];
+    char message[RSIZE];
     int n, i=0;
-    printf("Phase 2...\n");
+    printf("\nPhase 2...\n");
     printf("Populating the KV store with below messages...\n");
     while (i<NUM_OF_INTIAL_ENTRIES)
     {
-        for (int i=0; i<MSG_SIZE; i++)
+        for (int i=0; i < RSIZE; i++)
             message[i] = 'A' + random() % 26;
 
-        message[MSG_SIZE - 1] = (char)0;
+        message[RSIZE - 1] = (char)0;
         key_values[i] =  strdup(message);
         // printf("Key Val: %s\n",message);
         
 
         char *key, *val, *error;
-        key = substring(message, 0, 4);
-        val = substring(message, 4, 8);
+        key = substring(key_values[i], 0, KV_LEN);
+        val = substring(key_values[i], KV_LEN, RSIZE - 1);
+
         int code = put(key, val, &error, sockfd);
         // printf("Value: %s Code: %d\n",val, code);
         if (code < 0) {
@@ -393,7 +394,7 @@ int main(){
     } 
     pthread_t thread_id[NUM_OF_CLIENTS];
 
-    printf("Phase 3...\n");
+    printf("\nPhase 3...\n");
     printf("Starting the requests...\n");
     int args[NUM_OF_CLIENTS];
     for (size_t i = 0; i < NUM_OF_CLIENTS; i++)
