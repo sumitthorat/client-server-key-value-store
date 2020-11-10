@@ -10,6 +10,7 @@ struct time_stats* initialise_timer(){
     ts = (struct time_stats *)malloc(sizeof(struct time_stats));
     ts->total_get_time = 0;
     ts->total_put_time = 0;
+    ts->total_del_time = 0;
     return ts;
 }
 
@@ -23,6 +24,10 @@ double get_total_get_time(){
 
 double get_total_put_time(){
     return ts->total_put_time;
+}
+
+double get_total_del_time(){
+    return ts->total_del_time;
 }
 
 int get(char* key, char** val, char** error, int serverfd) {
@@ -131,16 +136,31 @@ int put(char* key, char* val, char** error, int serverfd) {
 
 int del(char* key, char** error, int serverfd) {
     char req[RSIZE];
+    struct timespec start, end;
     req[0] = '3';
     strncpy(req + KEY_START_IDX, key, KV_LEN);
 
     // Send request
+    clock_gettime(CLOCK_REALTIME, &start);
     int writen = write(serverfd, req, RSIZE);
 
     // Wait for response
     char* resp = (char*) malloc(sizeof(char) * RSIZE);
     int readn = read(serverfd, resp, RSIZE);
-
+    clock_gettime(CLOCK_REALTIME, &end);
+    double time_spent;
+    if ((end.tv_nsec-start.tv_nsec)<0)
+    {
+        struct timespec temp;
+        temp.tv_sec = end.tv_sec-start.tv_sec-1;
+        temp.tv_nsec = BILLION+end.tv_nsec-start.tv_nsec;
+        time_spent = temp.tv_sec + temp.tv_nsec / BILLION;
+    }
+    else
+    {
+        time_spent = ((end.tv_sec - start.tv_sec) +(end.tv_nsec - start.tv_nsec)) / BILLION;
+    }
+    ts->total_del_time+=time_spent;
     // Malloc error memory
     if (readn <= 0 || (unsigned char) resp[0] == ERROR) {
         *error = (char*) malloc(sizeof(char) * KV_LEN);

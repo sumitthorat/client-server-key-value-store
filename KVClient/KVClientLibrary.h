@@ -23,9 +23,7 @@
 struct time_stats{
     double total_get_time;
     double total_put_time;
-    // double average_put_time;
-    // double average_get_time;
-    // int total_clients;
+    double total_del_time;
 };
 
 
@@ -40,3 +38,4 @@ struct time_stats *initialise_timer();
 void destroy_timer();
 double get_total_get_time();
 double get_total_put_time();
+double get_total_del_time();

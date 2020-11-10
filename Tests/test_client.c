@@ -47,36 +47,53 @@ char *substring(char *str, int start, int end) {
 }
 
 
-void generate_report(){
+void generate_report(double run_time){
     double total_put_time = get_total_put_time();
     double total_get_time = get_total_get_time();
+    double total_del_time = get_total_del_time();
+
     double total_get_time_per_client = total_get_time/NUM_OF_CLIENTS;
     double total_put_time_per_client = total_put_time/NUM_OF_CLIENTS;
+    double total_del_time_per_client = total_del_time/NUM_OF_CLIENTS;
+
     double average_put_response_time = total_put_time/(NUM_OF_CLIENTS*NUM_OF_PUT);
-    double average_get_response_time = total_put_time/(NUM_OF_CLIENTS*NUM_OF_PUT);
+    double average_get_response_time = total_get_time/(NUM_OF_CLIENTS*NUM_OF_GET);
+    double average_del_response_time = total_del_time/(NUM_OF_CLIENTS*NUM_OF_DEL);
+
     printf("\n");
     printf("Server parameters: \n");
-     printf("==================\n");
+    printf("==================\n");
     printf("Worker threads: 4\n");
     printf("Cache lines: 128\n");
     printf("\n");
     printf("Client parameters: \n");
     printf("==================\n");
     printf("Clients: %d\n", NUM_OF_CLIENTS);
-    printf("GETs/client: %d\n", NUM_OF_GET);
-    printf("PUTs/client: %d\n", NUM_OF_PUT);
+    printf("\n");
+    printf("Total test_client.c runtime: %f\n", run_time);
     printf("\n");
     printf("PUT Metrics\n");
     printf("===========\n");
+    printf("PUTs/client: %d\n", NUM_OF_PUT);
     printf("Total PUT time is: %f secs\n", total_put_time);
     printf("Total PUT time per client is: %f milli-secs\n", total_put_time_per_client*pow(10,3));
     printf("Average PUT response time per client is: %f micro-secs\n", average_put_response_time*pow(10,6));
     printf("\n");
     printf("GET metrics\n");
     printf("===========\n");
+    printf("GETs/client: %d\n", NUM_OF_GET);
     printf("Total GET time is: %f secs\n", total_get_time);
     printf("Total GET time per client is: %f milli-secs\n", total_get_time_per_client*pow(10,3));
     printf("Average GET response time per client is: %f micro-secs\n", average_get_response_time*pow(10,6));
+    printf("\n");
+    printf("DEL metrics\n");
+    printf("===========\n");
+    printf("DELs/client: %d\n", NUM_OF_DEL);
+    printf("Total DEL time is: %f secs\n", total_del_time);
+    printf("Total DEL time per client is: %f milli-secs\n", total_del_time_per_client*pow(10,3));
+    printf("Average DEL response time per client is: %f micro-secs\n", average_del_response_time*pow(10,6));
+    printf("\n");
+    printf("Throughput of the server was: %f reqs/second\n", ((NUM_OF_DEL + NUM_OF_GET + NUM_OF_PUT)*NUM_OF_CLIENTS)/run_time);
 }
 
 
@@ -378,6 +395,7 @@ void *thread_fun(void *args){
 
 int main(){
     int socket;
+    struct timespec start, end;
     read_config();
     struct time_stats *ts = initialise_timer();
     socket = connect_to_server();
@@ -397,6 +415,8 @@ int main(){
     printf("Starting the requests...\n");
     ts = initialise_timer();
     int args[NUM_OF_CLIENTS];
+    // clock_gettime(CLOCK_REALTIME, &start);
+    clock_t before = clock();
     for (size_t i = 0; i < NUM_OF_CLIENTS; i++)
     {
         args[i]=i+1;
@@ -407,7 +427,10 @@ int main(){
     {
         pthread_join(thread_id[j],NULL);
     }
-    generate_report();
+    // clock_gettime(CLOCK_REALTIME, &end);
+    clock_t difference = clock() - before;
+    double time_spent = difference/(double)CLOCKS_PER_SEC;
+    generate_report(time_spent);
     destroy_timer(ts);
     printf("\n");
 }
