@@ -20,6 +20,7 @@ void del(char *msg, char*, int id);
 
 void handle_requests(char *msg, char* resp, int id) {
     char *key = substring(msg, 0, KEY_SIZE);
+    msg = substring(msg, 0, MSG_SIZE + 1);
     if (strlen(msg) - 1 > MSG_SIZE) {
         SET_MSG(resp, ERROR_CODE, key, "Erro");
         printf("handle req: set msg %s %ld\n", resp, strlen(msg)); 
