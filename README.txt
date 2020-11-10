@@ -27,6 +27,18 @@ Using the server_config.txt:
    - NUM_WORKER_THREADS: Number of worker threads the server will start.
    - CACHE_LEN: The number of cache lines the server will have.
 
+Performance Analysis:
+   - We have submitted 4 graph plots in the "Graph plots" directory.
+   - 1st - Throughput vs load (Number of clients), which has 3 lines for 500 reqs/client.
+   - 2nd - Response time vs load (Number of clients), which has 3 lines for response time of GET,PUT and DEL
+           for 500 reqs per client per GET and PUT.
+   - 3rd - Response time vs load (Number of clients), which has 3 lines for response time of GET,PUT and DEL
+           for 1000 reqs per client per GET and PUT.
+   - 4th - Response time vs load (Number of clients), which has 3 lines for response time of GET,PUT and DEL
+           for 2000 reqs per client per GET and PUT.
+
+    Note: ALSO, ALL THE REPORTS FOR VARIOUS RUNS ARE AVAILABLE IN THE "REPORTS" FOLDER.
+
 
 Key value store design:
 
@@ -82,19 +94,19 @@ KVClient APIs (Usage):
 
     int get(key, value, error, socket_fd):
         - char* - key - The key we want to get.
-        - char** - value - Value you want to pass.
+        - char* - value - Value you want to pass.
         - char** - error - If incase of error, this is set.
         - int - socket_fd - Pass the FD of the socket.
     Return value: less than 0 indicates an error with request (Key not found, Invalid message size or error code)
     
-    put(key, value, error, socket_fd):
+    int put(key, value, error, socket_fd):
         - char* - key - The key we want to get.
         - char* - value - Value you want to pass.
         - char** - error - If incase of error, this is set.
         - int - socket_fd - Pass the FD of the socket.
     Return value: less than 0 indicates an error with request (Key not found, Invalid message size or error code)
     
-    del(key, error, socket)
+    int del(key, error, socket)
        - char* - key - The key you want to delete.
        - char** - error - In case of error, this value is set to the error message.
        - int - socket - Pass the socket of the connection.
