@@ -306,6 +306,7 @@ void populate_kv_store(int sockfd){
     printf("Populating the KV store with below messages...\n");
     while (i<NUM_OF_INTIAL_ENTRIES)
     {
+        // printf("Starting New req\n");
         for (int i=0; i < RSIZE; i++)
             message[i] = 'A' + random() % 26;
 
@@ -317,16 +318,25 @@ void populate_kv_store(int sockfd){
         char *key, *val, *error;
         key = substring(key_values[i], 0, KV_LEN);
         val = substring(key_values[i], KV_LEN, RSIZE - 1);
-
+        // key = substring(key_values[i], 0, 1 + random() % KV_LEN); // any random length key
+        int temp = 1 + random() % (KV_LEN - 2);
+        // printf("temp = %d\n", temp);
+        val[temp] = '\0';
+        sprintf(message, "%s%s", key, val);
+        // printf("Msg: %ld %ld %ld\n", strlen(message + i), strlen(key), strlen(val));
         int code = put(key, val, &error, sockfd);
-        // printf("Value: %s Code: %d\n",val, code);
+        // printf("Value: %s Code: %d\n", val, code);
         if (code < 0) {
-            // printf("Err w/ K = %s\n", error ? "Some socket error" : error);
+            printf("Err w/ K = %s\n", error ? "Some socket error" : error);
         }
 
+
         i++;
+        // printf("Ending Req: i = %d\n", i);
     }
+    printf("Populate kv complete\n");
     // printf("\n");
+    // sleep(4);
 }
 
 
@@ -401,6 +411,7 @@ int main(){
     socket = connect_to_server();
 
     populate_kv_store(socket);
+    
     close_connection(socket);
     destroy_timer(ts);
 

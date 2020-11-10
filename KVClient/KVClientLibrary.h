@@ -10,7 +10,7 @@
 #include <pthread.h>
 #include <math.h>
 
-#define RSIZE 513
+#define RSIZE 513 // Request Size
 #define KEY_START_IDX 1
 #define VAL_START_IDX 257
 #define KV_LEN 256
@@ -39,3 +39,5 @@ void destroy_timer();
 double get_total_get_time();
 double get_total_put_time();
 double get_total_del_time();
+void add_padding(char *s);
+void remove_padding(char *s);
