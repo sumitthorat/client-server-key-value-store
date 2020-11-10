@@ -6,8 +6,15 @@ pthread_mutex_t get_time_lock, put_time_lock;
 
 struct time_stats *ts;
 
-void initialise_timer(){
+struct time_stats* initialise_timer(){
     ts = (struct time_stats *)malloc(sizeof(struct time_stats));
+    ts->total_get_time = 0;
+    ts->total_put_time = 0;
+    return ts;
+}
+
+void destroy_timer(struct time_stats* ts){
+    free(ts);
 }
 
 double get_total_get_time(){

@@ -379,13 +379,12 @@ void *thread_fun(void *args){
 int main(){
     int socket;
     read_config();
-    initialise_timer();
+    struct time_stats *ts = initialise_timer();
     socket = connect_to_server();
 
     populate_kv_store(socket);
     close_connection(socket);
-    // exit(0);
-    // sleep(4);
+    destroy_timer(ts);
 
     //Create clients here
     if (pthread_mutex_init(&lock, NULL) != 0) { 
@@ -393,9 +392,10 @@ int main(){
         return 1; 
     } 
     pthread_t thread_id[NUM_OF_CLIENTS];
-
+    
     printf("\nPhase 3...\n");
     printf("Starting the requests...\n");
+    ts = initialise_timer();
     int args[NUM_OF_CLIENTS];
     for (size_t i = 0; i < NUM_OF_CLIENTS; i++)
     {
@@ -408,8 +408,7 @@ int main(){
         pthread_join(thread_id[j],NULL);
     }
     generate_report();
+    destroy_timer(ts);
     printf("\n");
-        
-
 }
 

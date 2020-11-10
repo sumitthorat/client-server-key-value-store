@@ -36,6 +36,7 @@ int put(char* key, char* val, char** error, int serverfd);
 
 int del(char* key, char** error, int serverfd);
 
-void initialise_timer();
+struct time_stats *initialise_timer();
+void destroy_timer();
 double get_total_get_time();
 double get_total_put_time();
