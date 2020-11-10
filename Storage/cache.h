@@ -25,6 +25,7 @@ void initialize_cache() {
     for (int i = 0; i < CACHE_LEN; i++) {
         ENTRY *ptr = cache_ptr + i;
         ptr->is_valid = 'F'; 
+        ptr->is_dirty = 'F';
         init_rwlock(&(ptr->rwl));
         // printf("Initialised lock at %p\n", ptr);
     }
@@ -46,7 +47,6 @@ void initialize_cache() {
 */
 struct entry_with_status *find_update_cache_line(char *key, char *val, int req, int id) {
     // printf("find_update_cache_line\n");
-
     int status = 3; //by default status = 3
     unsigned long oldest_timestamp = LONG_MAX;
     ENTRY *entry = NULL;
@@ -75,7 +75,14 @@ struct entry_with_status *find_update_cache_line(char *key, char *val, int req, 
                 ret->status = status;
                 return ret;
             } else if (req == 2) {
+                char *prev = strdup(loc->val);
+                // printf("WT = %d: Prev = %s New = %s\n", id, loc->val, val);
                 update_cache_line(loc, key, val);
+                // printf("WT = %d: After update  = %s\n", id, loc->val);
+                if (strcmp(prev, loc->val) == 0) {
+                    printf("WT = %d: %s After update  = %s\n", id, prev, loc->val);
+                    exit(0);
+                }
                 write_unlock(&(loc->rwl));
                 // printf("Unlocked write lock at %d\n", j);
                 struct entry_with_status *ret = (struct entry_with_status *)malloc(sizeof(struct entry_with_status));

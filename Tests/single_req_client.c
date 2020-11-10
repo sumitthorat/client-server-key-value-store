@@ -8,9 +8,9 @@
 #include <unistd.h>
 #include <string.h>
 
-#define MSG_SIZE 9
-#define KEY_SIZE 4
-#define VAL_SIZE 4
+#define MSG_SIZE 513
+#define KEY_SIZE 256
+#define VAL_SIZE 256
 
 int SERVER_PORT;
 char *SERVER_IP;

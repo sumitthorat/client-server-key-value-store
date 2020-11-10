@@ -10,10 +10,10 @@
 #include <pthread.h>
 #include <math.h>
 
-#define RSIZE 9
+#define RSIZE 513
 #define KEY_START_IDX 1
-#define VAL_START_IDX 5
-#define KV_LEN 4
+#define VAL_START_IDX 257
+#define KV_LEN 256
 #define ERROR (char) 240
 #define SUCCESS (char) 200
 

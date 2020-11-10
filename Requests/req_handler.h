@@ -1,9 +1,9 @@
 #include "../Storage/cache.h"
 
 
-#define MSG_SIZE 9
-#define KEY_SIZE 4
-#define VAL_SIZE 4
+#define MSG_SIZE 513
+#define KEY_SIZE 256
+#define VAL_SIZE 256
 
 #define SUCCESS_CODE 200
 #define ERROR_CODE 240
@@ -20,9 +20,9 @@ void del(char *msg, char*, int id);
 
 void handle_requests(char *msg, char* resp, int id) {
     char *key = substring(msg, 0, KEY_SIZE);
-
-    if (strlen(msg) > MSG_SIZE) {
-        SET_MSG(resp, ERROR_CODE, key, "Erro"); 
+    if (strlen(msg) - 1 > MSG_SIZE) {
+        SET_MSG(resp, ERROR_CODE, key, "Erro");
+        printf("handle req: set msg %s %ld\n", resp, strlen(msg)); 
         return;
     }
 
