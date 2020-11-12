@@ -90,20 +90,16 @@ int get_file_hash_index(char *st) {
     return hash % NUM_OF_FILES;
 }
 
-void update_PS(char *key, char *val){
-    // printf("update ps\n");
+void update_PS(char *key, char *val) {
     char filename[30];
     int file_no = get_file_hash_index(key);
     get_file_name(filename, file_no);
-    // printf("Filename :%s\n", filename);
     int indexer_index = get_indexer_index(key);
     unsigned long long digest = get_digest(key);
 
     int present = 0;
     FILE *fp = fopen(filename, "r+"); 
-    // printf("Trying for lock in update ps\n");
     pthread_mutex_lock(&(indexer_array[indexer_index].mutex));
-    // printf("Got lock in update ps\n");
     struct indexer_node *head = indexer_array[indexer_index].head;
     struct indexer_node *prev = NULL;
     char buff[ENTRY_SIZE + 1];
@@ -134,9 +130,6 @@ void update_PS(char *key, char *val){
         fseek(fp, head->file_entry_no * ENTRY_SIZE, SEEK_SET);
         sprintf(buff, "%c%s%s", 'I', key, val);
         fwrite(buff, ENTRY_SIZE, 1, fp);
-        // fprintf(stderr, "Value of errno: %d\n", errno);
-        // fprintf(stderr, "Error opening file: %s\n", strerror(errno));
-        // printf("Update file: %s, len = %ld\n", buff);
     } else {
         struct indexer_node *node =  (struct indexer_node *)malloc(sizeof(struct indexer_node));
         fseek(fp, 0, SEEK_END);
@@ -144,9 +137,6 @@ void update_PS(char *key, char *val){
         node->digest = digest;
         sprintf(buff, "%c%s%s", 'I', key, val);
         size_t len = fwrite(buff, ENTRY_SIZE, 1, fp);
-        // fprintf(stderr, "Value of errno: %d\n", errno);
-        // fprintf(stderr, "Error opening file: %s\n", strerror(errno));
-        // printf("Write to file (%s, %d): %s, len = %ld\n", filename, fp->_fileno, buff, len);
         indexer_array[indexer_index].cnt++;
         if (!prev) {
             indexer_array[indexer_index].head = node;
@@ -159,11 +149,9 @@ void update_PS(char *key, char *val){
 
     pthread_mutex_unlock(&(indexer_array[indexer_index].mutex));
     fclose(fp);
-    // printf("leaving update ps\n");
 }
 
 char *find_in_PS(char *key){
-    // printf("find in ps\n");
     char filename[30];
     int file_no = get_file_hash_index(key);
     get_file_name(filename, file_no);
@@ -173,7 +161,6 @@ char *find_in_PS(char *key){
     int present = 0;
     FILE *fp = fopen (filename, "r+"); 
     pthread_mutex_lock(&(indexer_array[indexer_index].mutex));
-    // printf("Got lock in find in ps\n");
     struct indexer_node *head = indexer_array[indexer_index].head;
     char buff[ENTRY_SIZE + 1];
     buff[ENTRY_SIZE] = '\0';
@@ -183,9 +170,6 @@ char *find_in_PS(char *key){
             // we only store entry no. So multiply with 513 to get the exact location
             fseek(fp, head->file_entry_no * ENTRY_SIZE , SEEK_SET); 
             fread(buff, ENTRY_SIZE, 1, fp);
-            // fprintf(stderr, "Value of errno: %d\n", errno);
-            // fprintf(stderr, "Error opening file: %s\n", strerror(errno));
-            // printf("find_in_PS read: %s, len = %ld\n", buff);
             if (buff[0] == 'I') {
                 char *file_key = substring(buff, 1, KEY_SIZE + 1); // 1......(KEY_SIZE)
                 if (strcmp(file_key, key) == 0) {
@@ -202,7 +186,6 @@ char *find_in_PS(char *key){
     pthread_mutex_unlock(&(indexer_array[indexer_index].mutex));
     fclose(fp);
 
-    // printf("leaving find in ps\n");
     if(present) {
         return file_val;
     } else {
@@ -212,7 +195,6 @@ char *find_in_PS(char *key){
 }
 
 int remove_from_PS(char *key){
-    // printf("remove from ps\n");
     char filename[30];
     int file_no = get_file_hash_index(key);
     get_file_name(filename, file_no);
@@ -222,7 +204,6 @@ int remove_from_PS(char *key){
     int present = 0;
     FILE *fp = fopen (filename, "r+"); 
     pthread_mutex_lock(&(indexer_array[indexer_index].mutex));
-    // printf("Got lock in remove from ps\n");
     struct indexer_node *head = indexer_array[indexer_index].head;
     struct indexer_node *prev = NULL;
     char buff[ENTRY_SIZE + 1];
@@ -233,25 +214,19 @@ int remove_from_PS(char *key){
             // we only store entry no. So multiply with 513 to get the exact location
             fseek(fp, head->file_entry_no * ENTRY_SIZE , SEEK_SET); 
             fread(buff, ENTRY_SIZE, 1, fp);
-            // printf("Digest matched\n");
-            // printf("remove_from_PS read: %s\n", buff);
             if (buff[0] == 'I') {
                 char *file_key = substring(buff, 1, KEY_SIZE + 1); // 1......(KEY_SIZE)
-                // printf("file_key = %s\nkey = %s\n", file_key, key);
                 if (strcmp(file_key, key) == 0) {
                     if (prev == NULL) 
                         indexer_array[indexer_index].head = head->next;
                     else 
                         prev->next = head->next;
                     
-                    // printf("Del key found\n");
                     // write to file with 'D' entry
                     // fseek(fp, head->file_entry_no * ENTRY_SIZE , SEEK_SET); 
                     // fwrite();
                     present = 1;
-                    // printf("remove_from_ps: buff: %s\n", buff);
                     file_val = substring(buff, KEY_SIZE + 1, KEY_SIZE + VAL_SIZE + 1); // (KEY_SIZE + 1)......(KEY_SIZE + VAL_SIZE)
-                    // printf("remove_from_ps: file_val: %s\n", file_val);
                     break;
                 }
             }
@@ -263,7 +238,6 @@ int remove_from_PS(char *key){
 
     pthread_mutex_unlock(&(indexer_array[indexer_index].mutex));
     fclose(fp);
-    // printf("leaving remove from ps\n");
     if(present) {
         return 1;
     } else {

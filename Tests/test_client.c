@@ -167,8 +167,7 @@ int connect_to_server(){
     int sockfd;
     struct sockaddr_in serv_addr;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd<0)
-    {
+    if (sockfd<0) {
         printf("No sock only\n");
     }
     
@@ -213,21 +212,11 @@ void send_get_message(int t_id, int sockfd){
     key = substring(message, 0, KV_LEN);
     char* stored_val = substring(message, KV_LEN, RSIZE - 1);
    
-    // printf("Sending GET request, key = %s\n", key);
     int code = get(key, &val, &error, sockfd);
     
-    
     if (code == 0) {
-        // printf("Response = %s:%s (Successful GET)\n", key, val);
-        // if (!is_equal(val, stored_val, KV_LEN)) {
-        //     printf("\n********WRONG*******\n Key = %s\nExpected = %s\nGot = %s\n", key, stored_val, val);
-        // } else {
-        //     // printf("Correct!\n");
-        // }
         if (strcmp(val, stored_val) != 0) {
             printf("\n********WRONG*******\n Key = %s\nExpected = %s\nGot = %s\n", key, stored_val, val);
-        } else {
-            // printf("len = %ld %ld\n", strlen(val), strlen(stored_val));
         }
     } else {
         printf("Err with key = %s, %s\n", key, error);
@@ -244,12 +233,10 @@ void send_del_message(int t_id, int sockfd){
     int ridx = random() % NUM_OF_INTIAL_ENTRIES;
     char* message = strdup(key_values[ridx]);
     strcpy(key_values[ridx], key_values[NUM_OF_INTIAL_ENTRIES - 1]);
-    // key_values[ridx] = key_values[NUM_OF_INTIAL_ENTRIES - 1];
     NUM_OF_INTIAL_ENTRIES--;
 
 
     key = substring(message, 0, KV_LEN);
-    // printf("Sending DEL request, key = %s\n", key);
     int code = del(key, &error, sockfd);
     pthread_mutex_unlock(&lock);
 
@@ -274,12 +261,7 @@ void send_put_message(int t_id, int sockfd){
     key = substring(message, 0, KV_LEN);
     val = substring(message, KV_LEN, RSIZE - 1);
 
-    // printf("Sending PUT Request for key = %s\n", key);
-
-    // printf("Before update = %s ", val);
-
     int random_len = 1 + (random() % KV_LEN);
-    // int random_len = KV_LEN;
 
     for (int i = 0; i < random_len; ++i) {
         val[i] = 'A' + random() % 26;
@@ -288,18 +270,11 @@ void send_put_message(int t_id, int sockfd){
 
     val[random_len] = '\0';
     key_values[ridx][KV_LEN + random_len] = '\0'; 
-    // printf(", after = %s\n", key_values[ridx]);
 
-    // printf("Sending PUT request, key = %s, keylen = %d,\nval = %s, vallen = %d,\nmessage = %s, msglen = %d\n", key, strlen(key), val, strlen(val), message, strlen(message));
     int code = put(key, val, &error, sockfd);
     pthread_mutex_unlock(&lock);
     if (code == 0) {
-        // printf("Response = %s:%s (Successful PUT)\n", key, val);
-        // if (!is_equal(val, )) {
-        //     printf("\n\n\n********WRONG***********\n\n\n");
-        // } else {
-        //     // printf("Correct!\n");
-        // }
+        
     } else {
         printf("Err w/ K= %s\n", error);
     }
@@ -309,121 +284,89 @@ void send_put_message(int t_id, int sockfd){
 
 
 
-//Phase 1 read the config
-//Phase 2 populate the KV store
+// Phase 1 read the config
+// Phase 2 populate the KV store
 // Phase 3 Get(To do the get and put, ) and put
-
 void populate_kv_store(int sockfd){
-    // char message[RSIZE];
     int n, i=0;
     printf("\nPhase 2...\n");
     printf("Populating the KV store with below messages...\n");
     while (i < NUM_OF_INTIAL_ENTRIES)
     {
-        // int temp = KV_LEN + 1 + (random() % KV_LEN);
-        // // printf("Starting New req\n");
-        // for (int i = 0; i < temp; i++)
-        //     message[i] = 'A' + random() % 26;
-
-        // message[temp] = (char)0;
-        // key_values[i] =  strdup(message);
-        
-        // char *key, *val, *error;
-        // key = substring(key_values[i], 0, KV_LEN);
-        // val = substring(key_values[i], KV_LEN, RSIZE - 1);
-
         int random_len = KV_LEN + 1 + (random() % KV_LEN);
 
         for (int j = 0; j < random_len; ++j) {
             key_values[i][j] = 'A' + random() % 26;
         }
 
-        // key_values[i][RSIZE - 1] = '\0';
         key_values[i][random_len] = '\0';
         
         char *key, *val, *error;
         key = substring(key_values[i], 0, KV_LEN);
         val = substring(key_values[i], KV_LEN, RSIZE - 1);
         
-        // sprintf(key_values[i], "%s%s", key, val);
-        // printf("Key = %s\nVal = %s\n", key, val);
-        // printf("Msg: %ld %ld %ld\n", strlen(message + i), strlen(key), strlen(val));
         int code = put(key, val, &error, sockfd);
-        // printf("Value: %s Code: %d\n", val, code);
         if (code < 0) {
             printf("Err w/ K = %s, %s\n", key, error ? "Some socket error" : error);
         }
 
 
         i++;
-        // printf("Ending Req: i = %d\n", i);
-    }
-    printf("Populate KV complete\n");
-    // printf("\n");
-    // sleep(4);
+    }    
 }
 
 
 void *thread_fun(void *args){
-    // int *t_id = (int *)args;
     int t_id = *((int *) args);
-    // int id=*t_id;
     int sockfd = connect_to_server();
     int get=NUM_OF_GET;
     int put=NUM_OF_PUT;
     int del=NUM_OF_DEL;
-    // printf("Thread-%d initialised...\n", t_id);
-    //Creating a seed (Right now not calling delete)
+    
+    // Creating a seed (Right now not calling delete)
     while (get||put||del)
     {
-        /* code */
         srand((int)get_microsecond_timestamp());
         int random_num;
-        if (get && put && del)
-        {
-            /* code */
+        if (get && put && del) {
             random_num = rand()%3 + 1;
-        }
-        else if ((get && put)||(get && del)||(put && put))
-        {
-            /* code */
+        } else if ((get && put)||(get && del)||(put && put)) {
             random_num = rand()%2 + 1;
-        }
-        else if(get)
-        {
+        } else if (get) {
             random_num=1;
-        }else if(put){
+        } else if (put) {
             random_num=2;
-        }else if(del){
+        } else if (del) {
             random_num=3;
         }
+
         switch(random_num) {
-        case 1:
-            if (get)
-            {
-                send_get_message(t_id, sockfd);
-                get--;
-            }
-            break;
-        case 2:
-            if (put)
-            {
-                send_put_message(t_id, sockfd);
-                put--;
-            }
-            break;
-        case 3:
-            if (del)
-            {
-                send_del_message(t_id, sockfd);
-                del--;
-            }
-            break;
-        default:
-            return "Error: invalid option";
+            case 1:
+                if (get) {
+                    send_get_message(t_id, sockfd);
+                    get--;
+                }
+
+                break;
+            case 2:
+                if (put) {
+                    send_put_message(t_id, sockfd);
+                    put--;
+                }
+
+                break;
+            case 3:
+                if (del) {
+                    send_del_message(t_id, sockfd);
+                    del--;
+                }
+
+                break;
+            default:
+                return "Error: invalid option";
         }
-        
     }
+
     close_connection(sockfd);
 }
 
@@ -451,7 +394,6 @@ int main(){
     printf("Starting the requests...\n");
     ts = initialise_timer();
     int args[NUM_OF_CLIENTS];
-    // clock_gettime(CLOCK_REALTIME, &start);
     clock_t before = clock();
     for (size_t i = 0; i < NUM_OF_CLIENTS; i++)
     {
@@ -463,7 +405,6 @@ int main(){
     {
         pthread_join(thread_id[j],NULL);
     }
-    // clock_gettime(CLOCK_REALTIME, &end);
     clock_t difference = clock() - before;
     double time_spent = difference/(double)CLOCKS_PER_SEC;
     generate_report(time_spent);

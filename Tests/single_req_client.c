@@ -72,46 +72,22 @@ void connect_send() {
         key[KEY_SIZE] = '\0';
         val[VAL_SIZE] = '\0';
         if (status == 2 ) {
-            // sprintf(buff, "%c%s%s\0", status, key, val);
             printf("key = %s\nVal = %s\n", key, val);
         }
         else 
             printf("Key = %s\n", key);
-        // else
-        //     sprintf(buff, "%c%s\0", status, key);
-
-        // printf("buff: %s\n", buff);
-        // buff[MSG_SIZE] = '\0';
-        if (status == 1)
-        {
+        
+        if (status == 1) {
             get(key, &get_val, &error, sockfd);
             printf("Got Val: %s\n", get_val);
-        }
-        else if (status == 2)
-        {
+        } else if (status == 2) {
             put(key, val, &error, sockfd);
             printf("%s %s\n", key, val);
-        }
-        else if(status == 3)
-        {
+        } else if(status == 3) {
             del(key, &error, sockfd);
-        }
-        else
-        {
+        } else {
             printf("Invalid Request\n");
         }
-        
-        
-        // n = write(sockfd, buff, MSG_SIZE);
-        // printf("Sent Msg: %s\n", buff);
-        // char* resp = (char*) malloc(sizeof(char) * MSG_SIZE);
-        // int readn = read(sockfd, resp, MSG_SIZE);
-        // resp[MSG_SIZE]=(char)0;
-        // unsigned char status_code = *resp;
-        // printf("Recv Msg: %s with status: %d\n", resp, status_code);
-        // if (n < 0) {
-        //     // error("Error writing to socket");
-        // }
     }
 
     close(sockfd);

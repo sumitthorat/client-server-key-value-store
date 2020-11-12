@@ -25,14 +25,11 @@ void add_padding(char *s, int code, char *a, char *b) {
 
 void handle_requests(char *msg, char* resp, int id) {
     char *key = substring(msg, 1, KEY_SIZE + 1);
-    // msg = substring(msg, 0, MSG_SIZE + 1);
     if (strlen(msg) > MSG_SIZE) {
         SET_MSG(resp, ERROR_CODE, key, "ERROR: MSG SIZE IS MORE THAN 513 BYTES");
-        // printf("handle req: set msg %s %ld\n", resp, strlen(msg)); 
         return;
     } else if (strlen(msg) < MSG_SIZE) {
         SET_MSG(resp, ERROR_CODE, key, "ERROR: MSG SIZE IS LESS THAN 513 BYTES");
-        // printf("handle req: set msg %s %ld\n", resp, strlen(msg)); 
         return;
     }
 
@@ -55,46 +52,25 @@ void handle_requests(char *msg, char* resp, int id) {
 
 // GET request handler
 void get(char *msg, char* resp, int id) {
-    //printf("get\n");
-    //1sumit
     char *key = substring(msg, 0, KEY_SIZE);
-    // printf("From GET Cache contents: \n");
-    // display_cache();
-    // printf("\n");
+    
     struct entry_with_status *entry_with_status_val = find_update_cache_line(key, NULL, 1, id);
     ENTRY *loc = entry_with_status_val->entry;
     int status = entry_with_status_val->status;
     
-    // printf("key-value: %s, %s\n", loc->key, loc->val);
     // key is present in the cache
     if (status == 1) {
-        // printf("Got value =\"%s\"\n", loc->val);
-        // printf("CAHCE CONTENTS: \n");
-        // display_cache();
-        // printf("\n");
-        // sprintf(resp, "4%s%s", key, loc->val); 
         SET_MSG(resp, SUCCESS_CODE, key, loc->val);
 
         free(key);
 
     } else {
-        //printf("Entry not present in cache, searching the PS\n");
         char *val = find_in_PS(key);
-        // printf("Line 78 of req == ");
-        // display_chars(val, 6);
-        // printf("\n");
-
+       
         // key is not present in the PS
-        if(!val) {
-            //printf("Error: key not present\n");
-            // return "Error: key not present";
+        if (!val) {
             SET_MSG(resp, ERROR_CODE, key, "ERROR: GET key not found"); 
-        }
-        else {
-            //UNCOMMENT THE BELOW TWO LINES IF NOT ABLE TO UPDATE
-            // sprintf(msg, "%s%s", key, val);
-            // put(msg, resp, id);
-
+        } else {
             // Get the key-val in cache
             write_lock(&(loc->rwl));
             char *backup_key, *backup_val;
@@ -102,58 +78,26 @@ void get(char *msg, char* resp, int id) {
             if (loc->is_valid == 'T' && loc->is_dirty == 'T') {
                 backup_key = loc->key;
                 backup_val = loc->val;
-                // printf("Backup key to be evicted: ");
-                // display_chars(backup_key, 6);
-                // printf("\n");
                 flag = 1;
             }
-            // // Since we will do lazy update, currenly we don't care whether it is present in PS or not
-            // printf("BEFORE UPDATE: \n");
-            // printf("Cache contents: \n");
-            // display_cache();
-            // printf("\n");
+            // Since we will do lazy update, currenly we don't care whether it is present in PS or not
             update_cache_line(loc, key, val); 
             
-
-            // printf("\n");
             if (flag) {
                 update_PS(backup_key, backup_val); 
             }
-            // printf("AFTER UPDATE: \n");
-            // printf("Cache contents: \n");
-            // display_cache();
-            // printf("\n");
+            
             write_unlock(&(loc->rwl));
-            //printf("Got value =\"%s\"\n", val);
             SET_MSG(resp, SUCCESS_CODE, key, val);  
-            // return val;
         }
-        // printf("Location of cache line to be evicted: %p\n", loc);
-        // printf("Content of key: %s\n", key);
+
         free(key);
-        // printf("AFTER UPDATE: \n");
-        // printf("Cache contents: \n");
-        // display_cache();
-        // printf("\n");
     }
     free(entry_with_status_val);
-    // printf("AFTER UPDATE: \n");
-    //     printf("Cache contents: \n");
-    //     display_cache();
-    //     printf("\n");
-}
-
-void display_chars(char *str, int count){
-    // for (size_t i = 0; i < count; i++)
-    // {
-    //     printf("%c", str[i]);
-    // }
-    
 }
 
 // PUT request handler
 void put(char *msg, char* resp, int id) {
-    //printf("put\n");
     char *key = substring(msg, 0, KEY_SIZE);
     char *val = substring(msg, KEY_SIZE, KEY_SIZE + VAL_SIZE);
 
@@ -172,9 +116,7 @@ void put(char *msg, char* resp, int id) {
     char *backup_key;
     char *backup_val;
     int i = loc-cache_ptr;
-    //printf("Trying for write lock at %d with reader count: %d\n",i, loc->rwl.reader_count);
     write_lock(&(loc->rwl));
-    //printf("Obtained write lock \n");
     // key is present in the cache
     if (status == 2 || status == 3) {
         if (loc->is_valid == 'T' && loc->is_dirty == 'T') {
@@ -190,32 +132,17 @@ void put(char *msg, char* resp, int id) {
     if (flag) {
         update_PS(backup_key, backup_val); 
     }
-    // if (status==1 || status == 2)
-    // {
-    //     update_cache_line(loc, key, val);
-    // }
-    // else if(status == 3)
-    // {
-    //     backup_key = loc->key;
-    //     backup_val = loc->val;
-    //     update_cache_line(loc, key, val);
-    //     update_PS(backup_key, backup_val);
-    // }
-    
     
     write_unlock(&(loc->rwl));
-    //printf("Unlocked write lock at %d\n", i);
     SET_MSG(resp, SUCCESS_CODE, key, val);
 }
 
 // DEL request handler
 void del(char *msg, char* resp, int id) {
-    //printf("del\n");
     char *key =  substring(msg, 0, KEY_SIZE);
     struct entry_with_status *entry_with_status_val = find_update_cache_line(key, NULL, 3, id);
     ENTRY *loc = entry_with_status_val->entry;
     int status = entry_with_status_val->status;
-    // //printf("Entry %s\n", entry_with_status_val->entry->val ? entry_with_status_val->entry->val : "NULL");    
     
     free(entry_with_status_val);
     int code = remove_from_PS(key);

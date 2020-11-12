@@ -1,6 +1,6 @@
 #include "ds_defs.h"
 
-int getHashingIndex(char *key){
+int getHashingIndex(char *key) {
     unsigned char *str = (unsigned char *)key;
     unsigned long hash = 5381;
     int c;
@@ -45,7 +45,6 @@ int getHashingIndex(char *key){
         /* get the list head from current bucket */
         myNode = hashTable[hashIndex].head;
         if (!myNode) {
-                // printf("Given data is not present in hash Table!!\n");
                 return;
         }
         temp = myNode;
@@ -63,14 +62,9 @@ int getHashingIndex(char *key){
                 temp = myNode;
                 myNode = myNode->next;
         }
-        // if (flag)
-        //         printf("Data deleted successfully from Hash Table\n");
-        // else
-        //         printf("Given data is not present in hash Table!!!!\n");
-        // return;
   }
 
-  char *searchInHash(struct hash* hashTable,char *key) {
+char *searchInHash(struct hash* hashTable,char *key) {
         int hashIndex = getHashingIndex(key);
         struct node *myNode;
         myNode = hashTable[hashIndex].head;
@@ -83,13 +77,11 @@ int getHashingIndex(char *key){
                 }
                 myNode = myNode->next;
         }
-        // if (!flag)
-        //         printf("Search element unavailable in hash table\n");
+
         return NULL;
   }
 
-  struct hash* createHashTable() 
-{ 
+struct hash* createHashTable() { 
 	struct hash* hashTable = (struct hash*)malloc(BUCKETS*sizeof(struct hash)); 
         struct hash* temp = hashTable;
         for (size_t i = 0; i < BUCKETS; i++)
@@ -99,42 +91,3 @@ int getHashingIndex(char *key){
         }
 	return hashTable; 
 } 
-
-//   void display(struct hash* hashTable) {
-//         struct node *myNode;
-//         int i;
-//         for (i = 0; i < BUCKETS; i++) {
-//                 if (hashTable[i].count == 0)
-//                         continue;
-//                 myNode = hashTable[i].head;
-//                 if (!myNode)
-//                         continue;
-//                 printf("\nData at index %d in Hash Table with head %p:\n", i, hashTable[i].head);
-//                 printf("Key    \n");
-//                 printf("--------------------------------\n");
-//                 while (myNode != NULL) {
-//                         printf("%s \t%p\t %p\n", myNode->key,myNode, myNode->next);
-//                         myNode = myNode->next;
-//                 }
-//         }
-//         return;
-//   }
-
-// int main(){
-//     struct hash *table = createHashTable();
-//     // printf("Loc %p\n",table);
-//     insertToHash(table, "CCCA");
-//     insertToHash(table, "ABCD");
-//     // insertToHash(table, "DDAA");
-//     display(table);
-//     // printf("At postion 6: %d\n", table[6].count);
-//     deleteFromHash(table, "ABCD");
-//     // display(table);
-//     // printf("At postion 6: %d\n", table[6].count);
-//     // printf("Key: %s\n",searchInHash(table, "DDAA"));
-//     deleteFromHash(table, "DDAA");
-//     display(table);
-//     // printf("At postion 6: %d\n", table[6].count);
-//     // printf("Key: %s\n",searchInHash(table, "DDAA"));
-//     // printf("Key: %s\n",searchInHash(table, "ABCD"));
-// }
