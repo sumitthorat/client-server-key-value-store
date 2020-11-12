@@ -226,6 +226,8 @@ void send_get_message(int t_id, int sockfd){
         // }
         if (strcmp(val, stored_val) != 0) {
             printf("\n********WRONG*******\n Key = %s\nExpected = %s\nGot = %s\n", key, stored_val, val);
+        } else {
+            // printf("len = %ld %ld\n", strlen(val), strlen(stored_val));
         }
     } else {
         printf("Err w/ K= %s\n", error);
@@ -276,11 +278,16 @@ void send_put_message(int t_id, int sockfd){
 
     // printf("Before update = %s ", val);
 
-    for (int i = 0; i < KV_LEN; ++i) {
+    int random_len = 1 + (random() % KV_LEN);
+    // int random_len = KV_LEN;
+
+    for (int i = 0; i < random_len; ++i) {
         val[i] = 'A' + random() % 26;
         key_values[ridx][KV_LEN + i] = val[i];
     }
 
+    val[random_len] = '\0';
+    key_values[ridx][KV_LEN + random_len] = '\0'; 
     // printf(", after = %s\n", key_values[ridx]);
 
     // printf("Sending PUT request, key = %s, keylen = %d,\nval = %s, vallen = %d,\nmessage = %s, msglen = %d\n", key, strlen(key), val, strlen(val), message, strlen(message));
@@ -327,17 +334,16 @@ void populate_kv_store(int sockfd){
 
         int random_len = KV_LEN + 1 + (random() % KV_LEN);
 
-        for (int j = 0; j < RSIZE - 1; ++j) {
+        for (int j = 0; j < random_len; ++j) {
             key_values[i][j] = 'A' + random() % 26;
         }
 
-        key_values[i][RSIZE - 1] = '\0';
+        // key_values[i][RSIZE - 1] = '\0';
+        key_values[i][random_len] = '\0';
         
-
         char *key, *val, *error;
         key = substring(key_values[i], 0, KV_LEN);
         val = substring(key_values[i], KV_LEN, RSIZE - 1);
-        
         
         // sprintf(key_values[i], "%s%s", key, val);
         // printf("Key = %s\nVal = %s\n", key, val);
