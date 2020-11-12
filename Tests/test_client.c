@@ -25,7 +25,7 @@ int NUM_OF_INTIAL_ENTRIES;
 
 pthread_mutex_t lock; 
 
-char *key_values[1000];
+char key_values[1000][RSIZE];
 
 unsigned long get_microsecond_timestamp(){
     struct timeval tv;
@@ -43,6 +43,7 @@ char *substring(char *str, int start, int end) {
         substr[i - start] = str[i];
     }
 
+    substr[end - start] = '\0';
     return substr;
 }
 
@@ -214,7 +215,7 @@ void send_get_message(int t_id, int sockfd){
    
     // printf("Sending GET request, key = %s\n", key);
     int code = get(key, &val, &error, sockfd);
-    pthread_mutex_unlock(&lock);
+    
     
     if (code == 0) {
         // printf("Response = %s:%s (Successful GET)\n", key, val);
@@ -227,8 +228,10 @@ void send_get_message(int t_id, int sockfd){
             printf("\n********WRONG*******\n Key = %s\nExpected = %s\nGot = %s\n", key, stored_val, val);
         }
     } else {
-        // printf("Err w/ K= %s\n", error);
+        printf("Err w/ K= %s\n", error);
     }
+
+    pthread_mutex_unlock(&lock);
 }
 
 
@@ -237,10 +240,10 @@ void send_del_message(int t_id, int sockfd){
     char *key, *val, *error;
     pthread_mutex_lock(&lock);
     int ridx = random() % NUM_OF_INTIAL_ENTRIES;
-    key_values[ridx] = key_values[NUM_OF_INTIAL_ENTRIES - 1];
+    char* message = strdup(key_values[ridx]);
+    strcpy(key_values[ridx], key_values[NUM_OF_INTIAL_ENTRIES - 1]);
+    // key_values[ridx] = key_values[NUM_OF_INTIAL_ENTRIES - 1];
     NUM_OF_INTIAL_ENTRIES--;
-
-    char* message = key_values[ridx];
 
 
     key = substring(message, 0, KV_LEN);
@@ -280,7 +283,7 @@ void send_put_message(int t_id, int sockfd){
 
     // printf(", after = %s\n", key_values[ridx]);
 
-    // printf("Sending PUT request, key = %s\n", key);
+    // printf("Sending PUT request, key = %s, keylen = %d,\nval = %s, vallen = %d,\nmessage = %s, msglen = %d\n", key, strlen(key), val, strlen(val), message, strlen(message));
     int code = put(key, val, &error, sockfd);
     pthread_mutex_unlock(&lock);
     if (code == 0) {
@@ -291,7 +294,7 @@ void send_put_message(int t_id, int sockfd){
         //     // printf("Correct!\n");
         // }
     } else {
-        // printf("Err w/ K= %s\n", error);
+        printf("Err w/ K= %s\n", error);
     }
 
 
@@ -304,26 +307,40 @@ void send_put_message(int t_id, int sockfd){
 // Phase 3 Get(To do the get and put, ) and put
 
 void populate_kv_store(int sockfd){
-    char message[RSIZE];
+    // char message[RSIZE];
     int n, i=0;
     printf("\nPhase 2...\n");
     printf("Populating the KV store with below messages...\n");
-    while (i<NUM_OF_INTIAL_ENTRIES)
+    while (i < NUM_OF_INTIAL_ENTRIES)
     {
-        int temp = KV_LEN + 1 + (random() % KV_LEN);
-        // printf("Starting New req\n");
-        for (int i = 0; i < temp; i++)
-            message[i] = 'A' + random() % 26;
+        // int temp = KV_LEN + 1 + (random() % KV_LEN);
+        // // printf("Starting New req\n");
+        // for (int i = 0; i < temp; i++)
+        //     message[i] = 'A' + random() % 26;
 
-        message[temp] = (char)0;
-        key_values[i] =  strdup(message);
+        // message[temp] = (char)0;
+        // key_values[i] =  strdup(message);
         
+        // char *key, *val, *error;
+        // key = substring(key_values[i], 0, KV_LEN);
+        // val = substring(key_values[i], KV_LEN, RSIZE - 1);
+
+        int random_len = KV_LEN + 1 + (random() % KV_LEN);
+
+        for (int j = 0; j < RSIZE - 1; ++j) {
+            key_values[i][j] = 'A' + random() % 26;
+        }
+
+        key_values[i][RSIZE - 1] = '\0';
+        
+
         char *key, *val, *error;
         key = substring(key_values[i], 0, KV_LEN);
         val = substring(key_values[i], KV_LEN, RSIZE - 1);
         
         
         // sprintf(key_values[i], "%s%s", key, val);
+        // printf("Key = %s\nVal = %s\n", key, val);
         // printf("Msg: %ld %ld %ld\n", strlen(message + i), strlen(key), strlen(val));
         int code = put(key, val, &error, sockfd);
         // printf("Value: %s Code: %d\n", val, code);
@@ -335,7 +352,7 @@ void populate_kv_store(int sockfd){
         i++;
         // printf("Ending Req: i = %d\n", i);
     }
-    printf("Populate kv complete\n");
+    printf("Populate KV complete\n");
     // printf("\n");
     // sleep(4);
 }

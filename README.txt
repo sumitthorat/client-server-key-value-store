@@ -91,6 +91,9 @@ Key value store design:
 
 
 KVClient APIs (Usage):
+    IMPORTANT: 
+        - Whichever key/val (string) is sent to get/put/del api should be null terminated.
+        - Do not add dot character(".") as key or value because it is used as padding.
 
     int get(key, value, error, socket_fd):
         - char* - key - The key we want to get.

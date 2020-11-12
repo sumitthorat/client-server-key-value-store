@@ -171,6 +171,7 @@ void* worker(void* arg) {
             { 
                 char *key = substring(buff, 1, KEY_SIZE + 1); 
                 char *val = substring(buff, KEY_SIZE + 1, KEY_SIZE + VAL_SIZE + 1); 
+                // printf("Recvd req: \nKey =%s \n%s\n", key, val);
                 // printf("WT = %d: Trying to acquire mutex\n", id);
                 pthread_mutex_lock(&mutex);
                 // printf("WT = %d: acquired mutex\n", id);
@@ -189,7 +190,7 @@ void* worker(void* arg) {
                     // pthread_mutex_lock(&resp_lock);
                     // printf("WT: %d Responded:%d  received: %d\n",id, ++resp_count, recv_count);
                     // pthread_mutex_unlock(&resp_lock);
-                    // printf("Resp: %s\n", resp);
+                    // printf("Resp: %d\n", (unsigned char)resp[0]);
                     // printf("WT = %d: completed handle_requests\n", id);
                     // printf("WT = %d: Trying to acquire mutex\n", id);
                     pthread_mutex_lock(&mutex);
@@ -249,6 +250,7 @@ void* worker(void* arg) {
                 // pthread_mutex_unlock(&resp_lock);
                 // printf("Resp: %s\n", resp);
                 // printf("WT = %d: After write, len = %lu\n", id, write_len);
+                // printf("Resp: %d\n", (unsigned char)resp[0]);
                 pthread_mutex_lock(&mutex);
                 // printf("WT = %d: acquired mutex\n", id);
                 deleteFromHash(table,key);

@@ -35,6 +35,8 @@ int main(int argc, char** argv) {
     read_config();
 
     connect_send();
+
+    initialise_timer();
            
     return 0;
 }
@@ -59,21 +61,36 @@ void connect_send() {
     
     char* buff; 
     while (1) {
-        char key[KEY_SIZE], val[VAL_SIZE], *error;
-        char buff[MSG_SIZE + 1];
+        char key[KEY_SIZE + 1], val[VAL_SIZE + 1], *error, *get_val;
+        // char buff[MSG_SIZE + 1];
         int status;
-        printf("Enter op status, Key & val\n");
-        scanf("%d %s %s", &status, key, val);
-        
-        sprintf(buff, "%c%s%s", '0' + status, key, val);
-        buff[MSG_SIZE] = '\0';
+        printf("Enter op status, Key\n");
+        scanf("%d %s", &status, key);
+        if (status == 2)
+            scanf("%s", val);
+
+        key[KEY_SIZE] = '\0';
+        val[VAL_SIZE] = '\0';
+        if (status == 2 ) {
+            // sprintf(buff, "%c%s%s\0", status, key, val);
+            printf("key = %s\nVal = %s\n", key, val);
+        }
+        else 
+            printf("Key = %s\n", key);
+        // else
+        //     sprintf(buff, "%c%s\0", status, key);
+
+        // printf("buff: %s\n", buff);
+        // buff[MSG_SIZE] = '\0';
         if (status == 1)
         {
-            get(key, &val, &error, sockfd);
+            get(key, &get_val, &error, sockfd);
+            printf("Got Val: %s\n", get_val);
         }
         else if (status == 2)
         {
             put(key, val, &error, sockfd);
+            printf("%s %s\n", key, val);
         }
         else if(status == 3)
         {
@@ -81,20 +98,20 @@ void connect_send() {
         }
         else
         {
-            put(key, val, &error, sockfd);
+            printf("Invalid Request\n");
         }
         
         
         // n = write(sockfd, buff, MSG_SIZE);
-        printf("Sent Msg: %s\n", buff);
-        char* resp = (char*) malloc(sizeof(char) * MSG_SIZE);
-        int readn = read(sockfd, resp, MSG_SIZE);
-        resp[MSG_SIZE]=(char)0;
-        unsigned char status_code = *resp;
-        printf("Recv Msg: %s with status: %d\n", resp, status_code);
-        if (n < 0) {
-            // error("Error writing to socket");
-        }
+        // printf("Sent Msg: %s\n", buff);
+        // char* resp = (char*) malloc(sizeof(char) * MSG_SIZE);
+        // int readn = read(sockfd, resp, MSG_SIZE);
+        // resp[MSG_SIZE]=(char)0;
+        // unsigned char status_code = *resp;
+        // printf("Recv Msg: %s with status: %d\n", resp, status_code);
+        // if (n < 0) {
+        //     // error("Error writing to socket");
+        // }
     }
 
     close(sockfd);
@@ -103,7 +120,7 @@ void connect_send() {
 }
 
 void read_config(){
-    FILE* fptr = fopen("client_config.txt", "r");
+    FILE* fptr = fopen("Tests/client_config.txt", "r");
     size_t read, len;
     char * line = NULL;
     while ((read = getline(&line, &len, fptr)) != -1) {

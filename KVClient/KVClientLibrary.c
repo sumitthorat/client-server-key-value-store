@@ -88,7 +88,7 @@ int get(char* key, char** val, char** error, int serverfd) {
     req[0] = '1';
     strncpy(req + KEY_START_IDX, padded_key, KV_LEN);
     strncpy(req + VAL_START_IDX, padded_val, KV_LEN);
-    // printf("Req = %s, len = %d\n", req, strlen(req));
+    // printf("Req = %s, len = %ld\n", req, strlen(req));
 
     // printf("Req: %s\n", req);
     
@@ -101,9 +101,8 @@ int get(char* key, char** val, char** error, int serverfd) {
     ssize_t readn = read(serverfd, resp, RSIZE);
     resp[RSIZE] = '\0';
 
-    // printf("Resp = %s, len = %d\n", resp, strlen(resp));
 
-    // printf("Resp = %s\n", resp);
+    // printf("Resp = %s, len = %ld\n", resp, strlen(resp));
 
     clock_gettime(CLOCK_REALTIME, &end);
     double time_spent;
@@ -118,6 +117,7 @@ int get(char* key, char** val, char** error, int serverfd) {
     {
         time_spent = ((end.tv_sec - start.tv_sec) +(end.tv_nsec - start.tv_nsec)) / BILLION;
     }
+    // printf("Before Free\n");
     pthread_mutex_lock(&get_time_lock);
     ts->total_get_time+=time_spent;
     pthread_mutex_unlock(&get_time_lock);
@@ -130,21 +130,28 @@ int get(char* key, char** val, char** error, int serverfd) {
 
     // Malloc val/error memory
     if (readn <= 0 || (unsigned char) resp[0] == ERROR) {
+        // printf("Before malloc\n");
         *error = (char*) malloc(sizeof(char) * (KV_LEN + 1));
+        // printf("Before strnvpy\n");
         strncpy(*error, resp + VAL_START_IDX, KV_LEN);
+        // printf("After strnvpy\n");
         (*error)[KV_LEN] = '\0';
         remove_padding(*error);
+        printf("Error: %s\n", *error);
         // printf("Leaving get api err\n");
         return -1;
     }
 
     *val = (char*) malloc(sizeof(char) * (KV_LEN + 1));
     // printf("Before stncpy\n");
+    // printf("Val from GET API: %s\n", resp + VAL_START_IDX);
     strncpy(*val, resp + VAL_START_IDX, KV_LEN);
     // printf("Before KVLEN\n");
     (*val)[KV_LEN] = '\0';
     // printf("Before removing pad\n");
     remove_padding(*val);
+    // printf("Val from GET API: %s %d\n", *val, (unsigned char)resp[0]);
+    // printf("Leaving get api\n");
     return 0;
 }
 
@@ -159,6 +166,7 @@ int put(char* key, char* val, char** error, int serverfd) {
     } 
     else if(strlen(key) > KV_LEN)
     {
+        // printf("Key = %s, len = %ld\n", key, strlen(key));
         *error = (char*) malloc(sizeof(char) * (KV_LEN + 1));
         strncpy(*error, "Error: Key size is greater than 256B", KV_LEN);
         return -1;
@@ -195,7 +203,7 @@ int put(char* key, char* val, char** error, int serverfd) {
     strncpy(req + KEY_START_IDX, padded_key, KV_LEN);
     strncpy(req + VAL_START_IDX, padded_val, KV_LEN);
 
-    // printf("PUT REQ Being sent = %s\n%d\n", req, strlen(req));
+    // printf("PUT REQ Being sent = %s, len = %ld\n", req, strlen(req));
     struct timespec start, end;
     // Send request
     clock_gettime(CLOCK_REALTIME, &start);
@@ -207,7 +215,7 @@ int put(char* key, char* val, char** error, int serverfd) {
     resp[RSIZE] = '\0';
 
 
-    // printf("PUT RESP Rcvd = %s\n%lu\n", resp, readn);
+    // printf("PUT RESP = %s, len = %ld\n", resp, strlen(resp));
 
     clock_gettime(CLOCK_REALTIME, &end);
     double time_spent;
@@ -223,9 +231,11 @@ int put(char* key, char* val, char** error, int serverfd) {
         time_spent = ((end.tv_sec - start.tv_sec) +(end.tv_nsec - start.tv_nsec)) / BILLION;
     }
     
+    // printf("Before lock\n");   
     pthread_mutex_lock(&put_time_lock);
     ts->total_put_time+=time_spent;
     pthread_mutex_unlock(&put_time_lock);
+    // printf("After lock\n");   
 	// printf("Response time for PUT is %f micro-seconds \n", time_spent*pow(10,6));
 
     // printf("After remove_padding %ld %ld %s\n", strlen(key), strlen(val), resp);
@@ -233,6 +243,7 @@ int put(char* key, char* val, char** error, int serverfd) {
     free(padded_key);
     free(padded_val);
 
+    // printf("PUT Resp: %s\n", resp);
     if (readn <= 0) {
         // printf("Leaving put api, readn <= 0\n");
         return -1;
@@ -287,6 +298,9 @@ int del(char* key, char** error, int serverfd) {
     char* resp = (char*) malloc(sizeof(char) * (RSIZE + 1));
     int readn = read(serverfd, resp, RSIZE);
     resp[RSIZE] = '\0';
+
+    // printf("DEL RESP = %s, len = %d\n", resp, strlen(resp));
+    // printf("Resp = %s, len = %ld\n", resp, strlen(resp));
 
     clock_gettime(CLOCK_REALTIME, &end);
     double time_spent;

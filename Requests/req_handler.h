@@ -24,7 +24,7 @@ void add_padding(char *s, int code, char *a, char *b) {
 }
 
 void handle_requests(char *msg, char* resp, int id) {
-    char *key = substring(msg, 0, KEY_SIZE);
+    char *key = substring(msg, 1, KEY_SIZE + 1);
     // msg = substring(msg, 0, MSG_SIZE + 1);
     if (strlen(msg) > MSG_SIZE) {
         SET_MSG(resp, ERROR_CODE, key, "ERROR: MSG SIZE IS MORE THAN 513 BYTES");
@@ -86,21 +86,21 @@ void get(char *msg, char* resp, int id) {
         else {
 
             // Get the key-val in cache
-            write_lock(&(loc->rwl));
-            char *backup_key, *backup_val;
-            int flag = 0;
-            if (loc->is_valid == 'T' && loc->is_dirty == 'T') {
-                backup_key = loc->key;
-                backup_val = loc->val;
-                flag = 1;
-            }
+            // write_lock(&(loc->rwl));
+            // char *backup_key, *backup_val;
+            // int flag = 0;
+            // if (loc->is_valid == 'T' && loc->is_dirty == 'T') {
+            //     backup_key = loc->key;
+            //     backup_val = loc->val;
+            //     flag = 1;
+            // }
 
-            // Since we will do lazy update, currenly we don't care whether it is present in PS or not
-            update_cache_line(loc, key, val); 
-            if (flag) {
-                update_PS(backup_key, backup_val); 
-            }
-            write_unlock(&(loc->rwl));
+            // // Since we will do lazy update, currenly we don't care whether it is present in PS or not
+            // update_cache_line(loc, key, val); 
+            // if (flag) {
+            //     update_PS(backup_key, backup_val); 
+            // }
+            // write_unlock(&(loc->rwl));
             //printf("Got value =\"%s\"\n", val);
             SET_MSG(resp, SUCCESS_CODE, key, val);  
             // return val;
@@ -182,7 +182,7 @@ void del(char *msg, char* resp, int id) {
     if (code == 1 || status == 1) 
         SET_MSG(resp, SUCCESS_CODE, key, "Success: Key deleted"); 
     else 
-        SET_MSG(resp, SUCCESS_CODE, key, "Error: DEL key not found"); 
+        SET_MSG(resp, ERROR_CODE, key, "Error: DEL key not found"); 
 
     free(key);
 }

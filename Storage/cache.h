@@ -80,7 +80,9 @@ struct entry_with_status *find_update_cache_line(char *key, char *val, int req, 
                 update_cache_line(loc, key, val);
                 // printf("WT = %d: After update  = %s\n", id, loc->val);
                 if (strcmp(prev, loc->val) == 0) {
-                    printf("WT = %d: %s After update  = %s\n", id, prev, loc->val);
+                    // printf("WT = %d: Cache line not updated\nPrev: %s\nNew request: %s\n", id, prev, val);
+                    // printf("Key: %s\nNew request Key: %s\n", loc->key, key);
+                    
                     exit(0);
                 }
                 write_unlock(&(loc->rwl));
