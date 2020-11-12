@@ -32,6 +32,17 @@ void initialize_cache() {
     // printf("Size of entry: %ld\n", sizeof(ENTRY));
 }
 
+void display_cache(){
+    // for (int i = 0; i < CACHE_LEN; i++) {
+    //     ENTRY *ptr = cache_ptr + i;
+    //     display_chars(ptr->key,6);
+    //     printf("--");
+    //     display_chars(ptr->val,6);
+    //     printf("\n");
+    // }
+}
+
+
 /*
     Input : 
         key 
@@ -83,7 +94,7 @@ struct entry_with_status *find_update_cache_line(char *key, char *val, int req, 
                     // printf("WT = %d: Cache line not updated\nPrev: %s\nNew request: %s\n", id, prev, val);
                     // printf("Key: %s\nNew request Key: %s\n", loc->key, key);
                     
-                    exit(0);
+                    // exit(0);
                 }
                 write_unlock(&(loc->rwl));
                 // printf("Unlocked write lock at %d\n", j);

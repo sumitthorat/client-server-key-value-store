@@ -56,7 +56,7 @@ void handle_requests(char *msg, char* resp, int id) {
 // GET request handler
 void get(char *msg, char* resp, int id) {
     //printf("get\n");
-
+    //1sumit
     char *key = substring(msg, 0, KEY_SIZE);
     struct entry_with_status *entry_with_status_val = find_update_cache_line(key, NULL, 1, id);
     ENTRY *loc = entry_with_status_val->entry;
@@ -67,7 +67,7 @@ void get(char *msg, char* resp, int id) {
     if (status == 1) {
         //printf("Got value =\"%s\"\n", loc->val);
         
-        sprintf(resp, "4%s%s", key, loc->val); 
+        // sprintf(resp, "4%s%s", key, loc->val); 
         SET_MSG(resp, SUCCESS_CODE, key, loc->val);
 
         free(key);
@@ -75,7 +75,9 @@ void get(char *msg, char* resp, int id) {
     } else {
         //printf("Entry not present in cache, searching the PS\n");
         char *val = find_in_PS(key);
-        
+        // printf("Line 78 of req == ");
+        // display_chars(val, 6);
+        // printf("\n");
 
         // key is not present in the PS
         if(!val) {
@@ -84,7 +86,8 @@ void get(char *msg, char* resp, int id) {
             SET_MSG(resp, ERROR_CODE, key, "ERROR: GET key not found"); 
         }
         else {
-
+            sprintf(msg, "%s%s", key, val);
+            put(msg, resp, id);
             // Get the key-val in cache
             // write_lock(&(loc->rwl));
             // char *backup_key, *backup_val;
@@ -92,11 +95,22 @@ void get(char *msg, char* resp, int id) {
             // if (loc->is_valid == 'T' && loc->is_dirty == 'T') {
             //     backup_key = loc->key;
             //     backup_val = loc->val;
+            //     printf("Backup key to be evicted: ");
+            //     display_chars(backup_key, 6);
+            //     printf("\n");
             //     flag = 1;
             // }
-
-            // // Since we will do lazy update, currenly we don't care whether it is present in PS or not
+            // // // Since we will do lazy update, currenly we don't care whether it is present in PS or not
+            // printf("BEFORE UPDATE: \n");
+            // printf("Cache contents: \n");
+            // display_cache();
+            // printf("\n");
             // update_cache_line(loc, key, val); 
+            // printf("AFTER UPDATE: \n");
+            // printf("Cache contents: \n");
+            // display_cache();
+
+            // printf("\n");
             // if (flag) {
             //     update_PS(backup_key, backup_val); 
             // }
@@ -108,6 +122,14 @@ void get(char *msg, char* resp, int id) {
 
         free(key);
     }
+}
+
+void display_chars(char *str, int count){
+    // for (size_t i = 0; i < count; i++)
+    // {
+    //     printf("%c", str[i]);
+    // }
+    
 }
 
 // PUT request handler

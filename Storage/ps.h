@@ -95,6 +95,7 @@ void update_PS(char *key, char *val){
     char filename[30];
     int file_no = get_file_hash_index(key);
     get_file_name(filename, file_no);
+    // printf("Filename :%s\n", filename);
     int indexer_index = get_indexer_index(key);
     unsigned long long digest = get_digest(key);
 

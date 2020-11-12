@@ -230,7 +230,7 @@ void send_get_message(int t_id, int sockfd){
             // printf("len = %ld %ld\n", strlen(val), strlen(stored_val));
         }
     } else {
-        printf("Err w/ K= %s\n", error);
+        printf("Err with key = %s, %s\n", key, error);
     }
 
     pthread_mutex_unlock(&lock);
@@ -257,7 +257,7 @@ void send_del_message(int t_id, int sockfd){
     if (code == 0) {
         // printf("Response = %s (Successful DEL)\n", key);
     } else {
-        // printf("Err w/ K= %s\n", error);
+        printf("Err with key = %s, %s\n", key, error);
     }
 
 }
