@@ -1,15 +1,12 @@
 #include "ds_defs.h"
 
 int getHashingIndex(char *key){
-    long int sum=0;
-    for (size_t i = 0; i < HASH_NUMBER; i++)
-    {
-        long int temp = (key[i] & NUM)-1;
-        temp = pow(temp,i);
-        sum += temp; 
-    }
-    int hashIndex = sum % BUCKETS;
-    return hashIndex;
+    unsigned char *str = (unsigned char *)key;
+    unsigned long hash = 5381;
+    int c;
+    while (c = *str++)
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+    return hash % BUCKETS;
 }
 
   struct node * createNode(char *key) {
@@ -94,6 +91,12 @@ int getHashingIndex(char *key){
   struct hash* createHashTable() 
 { 
 	struct hash* hashTable = (struct hash*)malloc(BUCKETS*sizeof(struct hash)); 
+        struct hash* temp = hashTable;
+        for (size_t i = 0; i < BUCKETS; i++)
+        {
+                temp[i].count =0;
+                temp[i].head = NULL;
+        }
 	return hashTable; 
 } 
 

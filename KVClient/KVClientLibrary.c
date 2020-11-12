@@ -242,7 +242,7 @@ int put(char* key, char* val, char** error, int serverfd) {
     // Malloc error memory
     free(padded_key);
     free(padded_val);
-
+    // printf("Response: %s\n", resp);
     // printf("PUT Resp: %s\n", resp);
     if (readn <= 0) {
         // printf("Leaving put api, readn <= 0\n");

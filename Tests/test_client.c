@@ -25,7 +25,7 @@ int NUM_OF_INTIAL_ENTRIES;
 
 pthread_mutex_t lock; 
 
-char key_values[1000][RSIZE];
+char key_values[10000][RSIZE];
 
 unsigned long get_microsecond_timestamp(){
     struct timeval tv;
@@ -351,7 +351,7 @@ void populate_kv_store(int sockfd){
         int code = put(key, val, &error, sockfd);
         // printf("Value: %s Code: %d\n", val, code);
         if (code < 0) {
-            printf("Err w/ K = %s\n", error ? "Some socket error" : error);
+            printf("Err w/ K = %s, %s\n", key, error ? "Some socket error" : error);
         }
 
 

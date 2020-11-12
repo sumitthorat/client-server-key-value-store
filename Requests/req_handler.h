@@ -58,15 +58,20 @@ void get(char *msg, char* resp, int id) {
     //printf("get\n");
     //1sumit
     char *key = substring(msg, 0, KEY_SIZE);
+    // printf("From GET Cache contents: \n");
+    // display_cache();
+    // printf("\n");
     struct entry_with_status *entry_with_status_val = find_update_cache_line(key, NULL, 1, id);
     ENTRY *loc = entry_with_status_val->entry;
     int status = entry_with_status_val->status;
-    free(entry_with_status_val);
-
+    
+    // printf("key-value: %s, %s\n", loc->key, loc->val);
     // key is present in the cache
     if (status == 1) {
-        //printf("Got value =\"%s\"\n", loc->val);
-        
+        // printf("Got value =\"%s\"\n", loc->val);
+        // printf("CAHCE CONTENTS: \n");
+        // display_cache();
+        // printf("\n");
         // sprintf(resp, "4%s%s", key, loc->val); 
         SET_MSG(resp, SUCCESS_CODE, key, loc->val);
 
@@ -86,42 +91,56 @@ void get(char *msg, char* resp, int id) {
             SET_MSG(resp, ERROR_CODE, key, "ERROR: GET key not found"); 
         }
         else {
-            sprintf(msg, "%s%s", key, val);
-            put(msg, resp, id);
+            //UNCOMMENT THE BELOW TWO LINES IF NOT ABLE TO UPDATE
+            // sprintf(msg, "%s%s", key, val);
+            // put(msg, resp, id);
+
             // Get the key-val in cache
-            // write_lock(&(loc->rwl));
-            // char *backup_key, *backup_val;
-            // int flag = 0;
-            // if (loc->is_valid == 'T' && loc->is_dirty == 'T') {
-            //     backup_key = loc->key;
-            //     backup_val = loc->val;
-            //     printf("Backup key to be evicted: ");
-            //     display_chars(backup_key, 6);
-            //     printf("\n");
-            //     flag = 1;
-            // }
-            // // // Since we will do lazy update, currenly we don't care whether it is present in PS or not
+            write_lock(&(loc->rwl));
+            char *backup_key, *backup_val;
+            int flag = 0;
+            if (loc->is_valid == 'T' && loc->is_dirty == 'T') {
+                backup_key = loc->key;
+                backup_val = loc->val;
+                // printf("Backup key to be evicted: ");
+                // display_chars(backup_key, 6);
+                // printf("\n");
+                flag = 1;
+            }
+            // // Since we will do lazy update, currenly we don't care whether it is present in PS or not
             // printf("BEFORE UPDATE: \n");
             // printf("Cache contents: \n");
             // display_cache();
             // printf("\n");
-            // update_cache_line(loc, key, val); 
+            update_cache_line(loc, key, val); 
+            
+
+            // printf("\n");
+            if (flag) {
+                update_PS(backup_key, backup_val); 
+            }
             // printf("AFTER UPDATE: \n");
             // printf("Cache contents: \n");
             // display_cache();
-
             // printf("\n");
-            // if (flag) {
-            //     update_PS(backup_key, backup_val); 
-            // }
-            // write_unlock(&(loc->rwl));
+            write_unlock(&(loc->rwl));
             //printf("Got value =\"%s\"\n", val);
             SET_MSG(resp, SUCCESS_CODE, key, val);  
             // return val;
         }
-
+        // printf("Location of cache line to be evicted: %p\n", loc);
+        // printf("Content of key: %s\n", key);
         free(key);
+        // printf("AFTER UPDATE: \n");
+        // printf("Cache contents: \n");
+        // display_cache();
+        // printf("\n");
     }
+    free(entry_with_status_val);
+    // printf("AFTER UPDATE: \n");
+    //     printf("Cache contents: \n");
+    //     display_cache();
+    //     printf("\n");
 }
 
 void display_chars(char *str, int count){

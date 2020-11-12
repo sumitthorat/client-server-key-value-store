@@ -33,10 +33,10 @@ void error(char *msg)
 int main(int argc, char** argv) {
     // Read the config file
     read_config();
-
+    initialise_timer();
     connect_send();
 
-    initialise_timer();
+    
            
     return 0;
 }

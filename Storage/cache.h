@@ -143,8 +143,8 @@ void update_cache_line(ENTRY *loc, char *key, char *val) {
     else
         loc->freq = 1;
 
-    loc->key = key;
-    loc->val = val;
+    loc->key = strdup(key);
+    loc->val = strdup(val);
     loc->is_valid = 'T';
     loc->is_dirty = 'T';
     loc->timestamp = get_microsecond_timestamp();
