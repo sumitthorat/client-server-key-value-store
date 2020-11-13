@@ -26,6 +26,7 @@ void initialize_cache() {
         ENTRY *ptr = cache_ptr + i;
         ptr->is_valid = 'F'; 
         ptr->is_dirty = 'F';
+        ptr->timestamp = 0;
         init_rwlock(&(ptr->rwl));
     }
 }
@@ -87,14 +88,14 @@ struct entry_with_status *find_update_cache_line(char *key, char *val, int req, 
         } else if (loc->is_valid == 'F') {
             status = 2;
             entry = loc;
-        } else if (status!=2 && loc->is_valid == 'T' && oldest_timestamp > loc->timestamp && strcmp(REPLACEMENT_POLICY,"LRU") == 0) {
-            oldest_timestamp = (long int)loc->timestamp;
+        } else if (status!=2 && loc->is_valid == 'T' && oldest_timestamp > loc->freq && strcmp(REPLACEMENT_POLICY, "LRU") == 0) {
+            oldest_timestamp =  (long int)loc->freq;
             entry = loc;
-        } else if (status!=2 && loc->is_valid == 'T' && oldest_timestamp > loc->freq && strcmp(REPLACEMENT_POLICY,"LFU") == 0){
+        } 
+        else if (status!=2 && loc->is_valid == 'T' && oldest_timestamp > loc->freq && strcmp(REPLACEMENT_POLICY, "LFU")==0){
             oldest_timestamp = (long int)loc->freq;
             entry = loc;
         }
-
         write_unlock(&(loc->rwl));
     }
 
