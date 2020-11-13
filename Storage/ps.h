@@ -4,16 +4,13 @@
 #define NUM_OF_FILES 67
 #define INDEXER_LEN 997
 #define ENTRY_SIZE (KEY_SIZE + VAL_SIZE + 1) // KEY_SIZE + VAL_SIZE + 1
+
+pthread_mutex_t file_lock[NUM_OF_FILES];
 extern int errno;
 struct indexer{
     int cnt;
     struct indexer_node *head;
     pthread_mutex_t mutex;
-};
-
-struct file_entry{
-    char *key;
-    char *val;
 };
 
 struct indexer_node {
@@ -41,7 +38,8 @@ void initialise_ps()
     for (int i = 0; i < NUM_OF_FILES; i++) {
         char filename[30];
         get_file_name(filename, i);
-        
+        pthread_mutex_init(&(file_lock[i]), NULL);
+
         int fp = open(filename, O_TRUNC | O_CREAT, 0666);
         if( fp == -1 ) {
             fprintf(stderr, "Value of errno: %d\n", errno);
@@ -108,9 +106,10 @@ void update_PS(char *key, char *val) {
     while (head) {
         if (head->digest == digest) {
             // we only store entry no. So multiply with 513 to get the exact location
+            pthread_mutex_lock(&(file_lock[file_no]));
             fseek(fp, head->file_entry_no * ENTRY_SIZE , SEEK_SET); 
             fread(buff, ENTRY_SIZE, 1, fp);
-            
+            pthread_mutex_unlock(&(file_lock[file_no]));
             if (buff[0] == 'I') {
                 char *file_key = substring(buff, 1, KEY_SIZE + 1); // 1......(KEY_SIZE)
                 if (strcmp(file_key, key) == 0) {
@@ -124,19 +123,21 @@ void update_PS(char *key, char *val) {
         head = head->next;
     }
 
-    
-
     if(present) {
-        fseek(fp, head->file_entry_no * ENTRY_SIZE, SEEK_SET);
         sprintf(buff, "%c%s%s", 'I', key, val);
+        pthread_mutex_lock(&(file_lock[file_no]));
+        fseek(fp, head->file_entry_no * ENTRY_SIZE, SEEK_SET);
         fwrite(buff, ENTRY_SIZE, 1, fp);
+        pthread_mutex_unlock(&(file_lock[file_no]));
     } else {
         struct indexer_node *node =  (struct indexer_node *)malloc(sizeof(struct indexer_node));
+        sprintf(buff, "%c%s%s", 'I', key, val);
+        pthread_mutex_lock(&(file_lock[file_no]));
         fseek(fp, 0, SEEK_END);
         node->file_entry_no = ftell(fp) / ENTRY_SIZE;
+        fwrite(buff, ENTRY_SIZE, 1, fp);
+        pthread_mutex_unlock(&(file_lock[file_no]));
         node->digest = digest;
-        sprintf(buff, "%c%s%s", 'I', key, val);
-        size_t len = fwrite(buff, ENTRY_SIZE, 1, fp);
         indexer_array[indexer_index].cnt++;
         if (!prev) {
             indexer_array[indexer_index].head = node;
@@ -168,8 +169,10 @@ char *find_in_PS(char *key){
     while (head) {
         if (head->digest == digest) {
             // we only store entry no. So multiply with 513 to get the exact location
+            pthread_mutex_lock(&(file_lock[file_no]));
             fseek(fp, head->file_entry_no * ENTRY_SIZE , SEEK_SET); 
             fread(buff, ENTRY_SIZE, 1, fp);
+            pthread_mutex_unlock(&(file_lock[file_no]));
             if (buff[0] == 'I') {
                 char *file_key = substring(buff, 1, KEY_SIZE + 1); // 1......(KEY_SIZE)
                 if (strcmp(file_key, key) == 0) {
@@ -212,8 +215,10 @@ int remove_from_PS(char *key){
     while (head) {
         if (head->digest == digest) {
             // we only store entry no. So multiply with 513 to get the exact location
+            pthread_mutex_lock(&(file_lock[file_no]));
             fseek(fp, head->file_entry_no * ENTRY_SIZE , SEEK_SET); 
             fread(buff, ENTRY_SIZE, 1, fp);
+            pthread_mutex_unlock(&(file_lock[file_no]));
             if (buff[0] == 'I') {
                 char *file_key = substring(buff, 1, KEY_SIZE + 1); // 1......(KEY_SIZE)
                 if (strcmp(file_key, key) == 0) {

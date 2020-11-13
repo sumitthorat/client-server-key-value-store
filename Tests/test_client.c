@@ -262,7 +262,7 @@ void send_put_message(int t_id, int sockfd){
     val = substring(message, KV_LEN, RSIZE - 1);
 
     int random_len = 1 + (random() % KV_LEN);
-
+    random_len = KV_LEN; // for fixed size val
     for (int i = 0; i < random_len; ++i) {
         val[i] = 'A' + random() % 26;
         key_values[ridx][KV_LEN + i] = val[i];
@@ -291,10 +291,11 @@ void populate_kv_store(int sockfd){
     int n, i=0;
     printf("\nPhase 2...\n");
     printf("Populating the KV store with below messages...\n");
+    srand((int)get_microsecond_timestamp());
     while (i < NUM_OF_INTIAL_ENTRIES)
     {
         int random_len = KV_LEN + 1 + (random() % KV_LEN);
-
+        random_len = RSIZE - 1; // for fixed size key-val
         for (int j = 0; j < random_len; ++j) {
             key_values[i][j] = 'A' + random() % 26;
         }
@@ -304,10 +305,10 @@ void populate_kv_store(int sockfd){
         char *key, *val, *error;
         key = substring(key_values[i], 0, KV_LEN);
         val = substring(key_values[i], KV_LEN, RSIZE - 1);
-        
+
         int code = put(key, val, &error, sockfd);
         if (code < 0) {
-            printf("Err w/ K = %s, %s\n", key, error ? "Some socket error" : error);
+            printf("Err w/ K = %s, %s\n", key, error ? error : "Some socket error");
         }
 
 
