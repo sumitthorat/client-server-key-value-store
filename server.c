@@ -231,6 +231,11 @@ void read_config() {
                 token = strtok(NULL, "=");
                 CACHE_LEN=  atoi(token);
             }
+            else if(strcmp(token, "REPLACEMENT_POLICY")==0)
+            {
+                token = strtok(NULL, "=");
+                REPLACEMENT_POLICY = strdup(token);
+            }
             else
             {
                 token = strtok(NULL, "=");

@@ -7,7 +7,7 @@
 
 extern ENTRY *cache_ptr;
 extern long CACHE_LEN;
-
+char *REPLACEMENT_POLICY;
 // this will be used as return type from find_in_cache
 struct entry_with_status {
     ENTRY *entry;
@@ -87,8 +87,11 @@ struct entry_with_status *find_update_cache_line(char *key, char *val, int req, 
         } else if (loc->is_valid == 'F') {
             status = 2;
             entry = loc;
-        } else if (status!=2 && loc->is_valid == 'T' && oldest_timestamp > loc->timestamp) {
+        } else if (status!=2 && loc->is_valid == 'T' && oldest_timestamp > loc->timestamp && strcmp(REPLACEMENT_POLICY,"LRU") == 0) {
             oldest_timestamp = (long int)loc->timestamp;
+            entry = loc;
+        } else if (status!=2 && loc->is_valid == 'T' && oldest_timestamp > loc->freq && strcmp(REPLACEMENT_POLICY,"LFU") == 0){
+            oldest_timestamp = (long int)loc->freq;
             entry = loc;
         }
 
