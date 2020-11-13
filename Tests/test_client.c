@@ -203,7 +203,7 @@ int is_equal(char* a, char* b, int num_bytes) {
 
 
 void send_get_message(int t_id, int sockfd){
-    // pthread_mutex_lock(&lock);
+    pthread_mutex_lock(&lock);
     int ridx = random() % NUM_OF_INTIAL_ENTRIES;
     
 
@@ -222,14 +222,14 @@ void send_get_message(int t_id, int sockfd){
         // printf("Err with key = %s, %s\n", key, error);
     }
 
-    // pthread_mutex_unlock(&lock);
+    pthread_mutex_unlock(&lock);
 }
 
 
 void send_del_message(int t_id, int sockfd){
 
     char *key, *val, *error;
-    // pthread_mutex_lock(&lock);
+    pthread_mutex_lock(&lock);
     int ridx = random() % NUM_OF_INTIAL_ENTRIES;
     char* message = strdup(key_values[ridx]);
     strcpy(key_values[ridx], key_values[NUM_OF_INTIAL_ENTRIES - 1]);
@@ -238,7 +238,7 @@ void send_del_message(int t_id, int sockfd){
 
     key = substring(message, 0, KV_LEN);
     int code = del(key, &error, sockfd);
-    // pthread_mutex_unlock(&lock);
+    pthread_mutex_unlock(&lock);
 
 
     if (code == 0) {
@@ -251,7 +251,7 @@ void send_del_message(int t_id, int sockfd){
 
 void send_put_message(int t_id, int sockfd){
     
-    // pthread_mutex_lock(&lock);
+    pthread_mutex_lock(&lock);
     int ridx = random() % NUM_OF_INTIAL_ENTRIES;
     
 
@@ -272,7 +272,7 @@ void send_put_message(int t_id, int sockfd){
     key_values[ridx][KV_LEN + random_len] = '\0'; 
 
     int code = put(key, val, &error, sockfd);
-    // pthread_mutex_unlock(&lock);
+    pthread_mutex_unlock(&lock);
     if (code == 0) {
         
     } else {
